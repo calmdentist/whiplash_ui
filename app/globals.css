@@ -123,3 +123,48 @@
     font-family: var(--font-decima-mono);
   }
 }
+
+/* Gradient animations */
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.7);
+  }
+  
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(255, 107, 107, 0);
+  }
+  
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 107, 107, 0);
+  }
+}
+
+/* Pump.fun inspired gradients */
+.bg-pump-gradient {
+  background: linear-gradient(135deg, #ff6b6b, #6b66ff, #66ffa6);
+  background-size: 400% 400%;
+  animation: gradient 15s ease infinite;
+}
+
+.text-pump-gradient {
+  background: linear-gradient(90deg, #ff6b6b, #ff66d9, #6b66ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% auto;
+  animation: gradient 4s linear infinite;
+}

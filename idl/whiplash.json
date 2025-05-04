@@ -1,0 +1,711 @@
+{
+  "version": "0.1.0",
+  "name": "whiplash",
+  "instructions": [
+    {
+      "name": "launch",
+      "accounts": [
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "tokenMint",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "metadata",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenMetadataProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "virtualSolReserve",
+          "type": "u64"
+        },
+        {
+          "name": "tokenName",
+          "type": "string"
+        },
+        {
+          "name": "tokenTicker",
+          "type": "string"
+        },
+        {
+          "name": "metadataUri",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "swap",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenYVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenIn",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenOut",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amountIn",
+          "type": "u64"
+        },
+        {
+          "name": "minAmountOut",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "leverageSwap",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenYVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenIn",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenOut",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "position",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "positionTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "positionTokenMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "amountIn",
+          "type": "u64"
+        },
+        {
+          "name": "minAmountOut",
+          "type": "u64"
+        },
+        {
+          "name": "leverage",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "liquidate",
+      "accounts": [
+        {
+          "name": "liquidator",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "positionOwner",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The owner of the position being liquidated"
+          ]
+        },
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenYVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "position",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "positionTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "closePosition",
+      "accounts": [
+        {
+          "name": "user",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenYVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "position",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "positionTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "userTokenOut",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Pool",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "tokenYMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "tokenYVault",
+            "type": "publicKey"
+          },
+          {
+            "name": "tokenYAmount",
+            "type": "u64"
+          },
+          {
+            "name": "virtualTokenYAmount",
+            "type": "u64"
+          },
+          {
+            "name": "lamports",
+            "type": "u64"
+          },
+          {
+            "name": "virtualSolAmount",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Position",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "pool",
+            "type": "publicKey"
+          },
+          {
+            "name": "positionVault",
+            "type": "publicKey"
+          },
+          {
+            "name": "isLong",
+            "type": "bool"
+          },
+          {
+            "name": "collateral",
+            "type": "u64"
+          },
+          {
+            "name": "leverage",
+            "type": "u8"
+          },
+          {
+            "name": "entryPrice",
+            "type": "u128"
+          },
+          {
+            "name": "size",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "PoolLaunched",
+      "fields": [
+        {
+          "name": "tokenMint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "virtualSolReserve",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "timestamp",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "Swapped",
+      "fields": [
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "tokenInMint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "tokenOutMint",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "amountIn",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "amountOut",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "timestamp",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "PositionOpened",
+      "fields": [
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "position",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "isLong",
+          "type": "bool",
+          "index": false
+        },
+        {
+          "name": "collateral",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "leverage",
+          "type": "u8",
+          "index": false
+        },
+        {
+          "name": "size",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "entryPrice",
+          "type": "u128",
+          "index": false
+        },
+        {
+          "name": "timestamp",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "PositionClosed",
+      "fields": [
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "position",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "isLong",
+          "type": "bool",
+          "index": false
+        },
+        {
+          "name": "positionSize",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "borrowedAmount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "outputAmount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "userReceived",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "timestamp",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "PositionLiquidated",
+      "fields": [
+        {
+          "name": "liquidator",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "positionOwner",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "position",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "positionSize",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "borrowedAmount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "expectedOutput",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "liquidatorReward",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "timestamp",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidTokenAccounts",
+      "msg": "Invalid token accounts"
+    },
+    {
+      "code": 6001,
+      "name": "InsufficientLiquidity",
+      "msg": "Insufficient liquidity"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidMintAuthority",
+      "msg": "Invalid mint authority"
+    },
+    {
+      "code": 6003,
+      "name": "SlippageToleranceExceeded",
+      "msg": "Slippage tolerance exceeded"
+    },
+    {
+      "code": 6004,
+      "name": "MathOverflow",
+      "msg": "Mathematical operation overflow"
+    },
+    {
+      "code": 6005,
+      "name": "PoolAlreadyInitialized",
+      "msg": "Pool already initialized"
+    },
+    {
+      "code": 6006,
+      "name": "ZeroLiquidity",
+      "msg": "Zero liquidity provided"
+    },
+    {
+      "code": 6007,
+      "name": "ZeroSwapAmount",
+      "msg": "Zero swap amount"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidPoolState",
+      "msg": "Invalid pool state"
+    },
+    {
+      "code": 6009,
+      "name": "Unauthorized",
+      "msg": "Unauthorized operation"
+    },
+    {
+      "code": 6010,
+      "name": "MetadataCreationFailed",
+      "msg": "Failed to create metadata account"
+    },
+    {
+      "code": 6011,
+      "name": "AuthorityChangeFailed",
+      "msg": "Failed to change token authority"
+    },
+    {
+      "code": 6012,
+      "name": "PositionNotLiquidatable",
+      "msg": "Position cannot be liquidated"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidPosition",
+      "msg": "Invalid position"
+    },
+    {
+      "code": 6014,
+      "name": "InsufficientOutput",
+      "msg": "Insufficient output amount"
+    },
+    {
+      "code": 6015,
+      "name": "InsufficientFunds",
+      "msg": "Insufficient funds for transaction"
+    }
+  ],
+  "metadata": {
+    "address": "GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ"
+  }
+}

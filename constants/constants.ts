@@ -1,8 +1,8 @@
 // RPC configuration
-export const RPC_URL = "https://api.mainnet-beta.solana.com";
+export const RPC_URL = "http://localhost:8899";
 
 // Whiplash program details
-export const WHIPLASH_PROGRAM_ID = "whipXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"; // Replace with actual program ID
+export const WHIPLASH_PROGRAM_ID = "GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ";
 export const USDC_TOKEN_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 // Feature flags
