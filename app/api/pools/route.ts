@@ -1,48 +1,63 @@
 import { Connection, PublicKey } from "@solana/web3.js";
+import { Program, AnchorProvider, Idl, ProgramAccount } from "@project-serum/anchor";
 import { NextResponse } from "next/server";
 import { RPC_URL, WHIPLASH_PROGRAM_ID } from "@/constants/constants";
+import IDL from "@/idl/whiplash.json";
 
 export const dynamic = "force-dynamic";
 
-const PROGRAM_ID = new PublicKey(WHIPLASH_PROGRAM_ID);
+interface Pool {
+  address: string;
+  authority: string;
+  tokenYMint: string;
+  tokenYVault: string;
+  tokenYAmount: string;
+  virtualTokenYAmount: string;
+  lamports: string;
+  virtualSolAmount: string;
+}
+
+export async function fetchAllPools(): Promise<Pool[]> {
+  const programId = new PublicKey(WHIPLASH_PROGRAM_ID);
+  
+  // Create a provider without a wallet since this is server-side
+  const provider = new AnchorProvider(
+    new Connection(RPC_URL, 'confirmed'),
+    {} as any, // wallet is not needed for reading
+    AnchorProvider.defaultOptions()
+  );
+
+  // Create program interface
+  const program = new Program(IDL as Idl, programId, provider);
+
+  try {
+    // Fetch all accounts of type "Pool"
+    const pools = await program.account.pool.all();
+    console.log("Found pools:", pools.length);
+    
+    // Transform the accounts into a more friendly format
+    return pools.map((pool: ProgramAccount<any>) => ({
+      address: pool.publicKey.toBase58(),
+      authority: pool.account.authority.toBase58(),
+      tokenYMint: pool.account.tokenYMint.toBase58(),
+      tokenYVault: pool.account.tokenYVault.toBase58(),
+      tokenYAmount: pool.account.tokenYAmount.toString(),
+      virtualTokenYAmount: pool.account.virtualTokenYAmount.toString(),
+      lamports: pool.account.lamports.toString(),
+      virtualSolAmount: pool.account.virtualSolAmount.toString(),
+    }));
+  } catch (error) {
+    console.error("Error fetching pools:", error);
+    throw error;
+  }
+}
 
 export async function GET() {
   try {
-    const connection = new Connection(RPC_URL);
-    console.log("Fetching program accounts for program:", PROGRAM_ID.toBase58());
-
-    // Fetch all program accounts of type Pool
-    const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
-      filters: [
-        {
-          dataSize: 129, // Correct size for Pool account
-        },
-      ],
-    });
-    console.log("Found accounts:", accounts.length);
-    console.log("Account details:", accounts.map(acc => ({
-      pubkey: acc.pubkey.toBase58(),
-      dataSize: acc.account.data.length
-    })));
-
-    const pools = accounts.map((account) => {
-      const data = account.account.data;
-      return {
-        address: account.pubkey.toBase58(),
-        authority: new PublicKey(data.slice(8, 40)).toBase58(),
-        tokenYMint: new PublicKey(data.slice(40, 72)).toBase58(),
-        tokenYVault: new PublicKey(data.slice(72, 104)).toBase58(),
-        tokenYAmount: data.readBigUInt64LE(104).toString(),
-        virtualTokenYAmount: data.readBigUInt64LE(112).toString(),
-        lamports: data.readBigUInt64LE(120).toString(),
-        virtualSolAmount: data.readBigUInt64LE(128).toString(),
-      };
-    });
-    console.log("Processed pools:", pools);
-
+    const pools = await fetchAllPools();
     return NextResponse.json({ pools });
   } catch (error) {
-    console.error("Error fetching pools:", error);
+    console.error("Error in GET /api/pools:", error);
     return NextResponse.json(
       { error: "Failed to fetch pools" },
       { status: 500 }

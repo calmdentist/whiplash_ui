@@ -35,17 +35,14 @@ export default function Navbar() {
       </div>
 
       <div className="hidden md:flex items-center space-x-8">
-        <Link href="/tokens" className="text-foreground hover:text-primary transition font-mono">
-          Tokens
-        </Link>
         <Link href="/trade" className="text-foreground hover:text-primary transition font-mono">
           Trade
         </Link>
-        <Link href="/pools" className="text-foreground hover:text-primary transition font-mono">
-          Pools
+        <Link href="/launch" className="text-foreground hover:text-primary transition font-mono">
+          Launch
         </Link>
-        <Link href="/leverage" className="text-foreground hover:text-primary transition font-mono">
-          Leverage
+        <Link href="/docs" className="text-foreground hover:text-primary transition font-mono">
+          Docs
         </Link>
       </div>
 
@@ -107,17 +104,14 @@ export default function Navbar() {
       {isMenuOpen && (
         <div className="absolute top-16 right-0 left-0 bg-card p-4 md:hidden z-50 border-b border-border">
           <div className="flex flex-col space-y-4">
-            <Link href="/tokens" className="text-foreground hover:text-primary transition font-mono">
-              Tokens
-            </Link>
             <Link href="/trade" className="text-foreground hover:text-primary transition font-mono">
               Trade
             </Link>
-            <Link href="/pools" className="text-foreground hover:text-primary transition font-mono">
-              Pools
+            <Link href="/launch" className="text-foreground hover:text-primary transition font-mono">
+              Launch
             </Link>
-            <Link href="/leverage" className="text-foreground hover:text-primary transition font-mono">
-              Leverage
+            <Link href="/docs" className="text-foreground hover:text-primary transition font-mono">
+              Docs
             </Link>
           </div>
         </div>

@@ -115,54 +115,53 @@ export default function TokensTable() {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Token
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Name
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Ticker
-            </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Market Cap
-            </th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {tokens.map((token) => (
-            <tr key={token.address}>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {token.metadata?.image ? (
-                  <div className="relative w-8 h-8">
-                    <Image
-                      src={token.metadata.image}
-                      alt={token.metadata.name || "Token"}
-                      fill
-                      className="rounded-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-8 h-8 bg-gray-200 rounded-full" />
-                )}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {tokens.map((token) => (
+        <div 
+          key={token.address} 
+          className="relative group p-6 transition-all hover:brightness-110 hover:scale-[1.02] rounded-lg"
+          style={{ 
+            backgroundColor: `hsl(${Math.random() * 360}, 70%, 20%)`,
+            boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.1)',
+          }}
+        >
+          <div className="flex items-center gap-3 mb-4">
+            {token.metadata?.image ? (
+              <div className="relative w-16 h-16">
+                <Image
+                  src={token.metadata.image}
+                  alt={token.metadata.name || "Token"}
+                  fill
+                  className="rounded-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-16 h-16 bg-white/10 rounded-full" />
+            )}
+            <div>
+              <h2 className="text-xl font-semibold text-white line-clamp-1">
                 {token.metadata?.name || "Unknown"}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
+              </h2>
+              <p className="text-white/70 text-sm">
                 {token.metadata?.symbol || "Unknown"}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                {calculateMarketCap(token)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-white/70">Market Cap</p>
+              <p className="font-semibold text-white">{calculateMarketCap(token)}</p>
+            </div>
+            <div>
+              <p className="text-white/70">Total Value</p>
+              <p className="font-semibold text-white">
+                ${(Number(token.lamports) / 1e9 * (solPrice || 0)).toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 } 
