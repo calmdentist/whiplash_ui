@@ -28,7 +28,8 @@ export default function LaunchPage() {
   const [tokenName, setTokenName] = useState('');
   const [tokenTicker, setTokenTicker] = useState('');
   const [virtualLiquidity, setVirtualLiquidity] = useState('');
-  const [tokenImage, setTokenImage] = useState<string | null>(null);
+  const [tokenImage, setTokenImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [website, setWebsite] = useState('');
   const [twitter, setTwitter] = useState('');
   const [telegram, setTelegram] = useState('');
@@ -42,12 +43,14 @@ export default function LaunchPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setTokenImage(result);
-      };
-      reader.readAsDataURL(file);
+      if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
+        toast.error('Please upload only PNG or JPG images');
+        return;
+      }
+      setTokenImage(file);
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
     }
   };
 
@@ -139,11 +142,11 @@ export default function LaunchPage() {
                   >
                     {tokenImage ? (
                       <Image 
-                        src={tokenImage}
+                        src={imagePreview || ''}
                         alt="Token image" 
                         width={128}
                         height={128}
-                        className="object-cover rounded-full"
+                        className="object-cover rounded-full w-full h-full aspect-square"
                       />
                     ) : (
                       <div className="text-center text-white">

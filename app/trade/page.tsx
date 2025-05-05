@@ -205,11 +205,12 @@ export default function TradePage() {
               <div style={{ marginTop: '18px' }} />
 
               {/* Leverage Slider */}
-              <div className="flex flex-col gap-2 bg-[#23242a] rounded-2xl p-5">
+              <div className="flex flex-col gap-1 bg-[#23242a] rounded-2xl p-5">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="font-mono text-sm text-[#b5b5b5]">Leverage</span>
-                  <span className="font-mono text-sm text-white">{leverage.toFixed(1)}x{leverage === 1.0 ? ' (Spot)' : ''}</span>
+                  <span className="font-mono text-sm text-white">Leverage</span>
+                  <span className="font-mono text-sm text-white">{leverage.toFixed(1)}x{leverage === 1.0 ? ' (spot)' : ''}</span>
                 </div>
+                <div className="mb-1" />
                 <input
                   type="range"
                   min={1}

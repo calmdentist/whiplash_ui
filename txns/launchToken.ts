@@ -135,11 +135,16 @@ export async function createLaunchTokenTransaction({
   );
 
   // Get optimal compute units
-  const computeUnits = await getOptimalComputeUnits(
-    transaction.instructions,
-    wallet.publicKey,
-    []
-  );
+  let computeUnits = 500_000;
+  try {
+    computeUnits = await getOptimalComputeUnits(
+      transaction.instructions,
+      wallet.publicKey,
+      []
+    ) ?? 500_000;
+  } catch (error) {
+    console.error('Error getting optimal compute units:', error);
+  }
 
   if (computeUnits) {
     transaction.add(
