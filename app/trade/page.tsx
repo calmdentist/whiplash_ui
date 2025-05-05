@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { MAX_LEVERAGE } from '@/constants/constants';
+import { Avatar } from '../../components/avatars/Avatar';
 
 // Mock chart data
 const mockChartData = [
@@ -14,16 +15,78 @@ const mockChartData = [
   { time: '2023-01-05', value: 125 },
 ];
 
+const tokenList = [
+  { symbol: 'USDC', icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=026', decimals: 2, usd: 1 },
+  { symbol: 'SOL', icon: 'https://cryptologos.cc/logos/solana-sol-logo.png?v=026', decimals: 4, usd: 145 },
+];
+
+// Trending tokens mock
+const trendingTokens = [
+  { symbol: 'USDC', icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=026' },
+  { symbol: 'SOL', icon: 'https://cryptologos.cc/logos/solana-sol-logo.png?v=026' },
+  { symbol: 'ETH', icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=026' },
+  { symbol: 'BTC', icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=026' },
+  { symbol: 'BONK', icon: 'https://cryptologos.cc/logos/bonk-bonk-logo.png?v=026' },
+];
+
+function getToken(symbol: string) {
+  return tokenList.find((t) => t.symbol === symbol) || tokenList[0];
+}
+
+function TokenDropdown({ selected, onSelect }: { selected: string, onSelect: (symbol: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const filtered = trendingTokens.filter(t => t.symbol.toLowerCase().includes(search.toLowerCase()));
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        className="flex items-center gap-2 px-2 py-1 rounded bg-transparent hover:bg-[#23242a]"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <Avatar publicKey={selected} size={28} />
+        <span className="font-mono text-lg text-white">{selected}</span>
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="ml-1 text-white"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-2 w-64 p-2 bg-[#181A20] border border-[#23242a] rounded-xl shadow-xl">
+          <input
+            autoFocus
+            className="w-full mb-2 px-3 py-2 rounded bg-[#23242a] text-white placeholder:text-[#888] outline-none"
+            placeholder="search token or address"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+            {filtered.map(token => (
+              <button
+                key={token.symbol}
+                type="button"
+                onClick={() => { onSelect(token.symbol); setOpen(false); setSearch(''); }}
+                className="flex items-center gap-2 px-2 py-2 rounded hover:bg-[#23242a] cursor-pointer"
+              >
+                <Avatar publicKey={token.symbol} size={24} />
+                <span className="text-white font-mono">{token.symbol}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function TradePage() {
   const { connected } = useWallet();
-  const [selectedToken, setSelectedToken] = useState('SOL');
   const [inputToken, setInputToken] = useState('USDC');
   const [outputToken, setOutputToken] = useState('SOL');
   const [inputAmount, setInputAmount] = useState('');
   const [outputAmount, setOutputAmount] = useState('');
   const [slippage, setSlippage] = useState(0.5);
-  const [leverage, setLeverage] = useState(1);
-  const [tradeType, setTradeType] = useState<'spot' | 'leverage'>('spot');
+  const [leverage, setLeverage] = useState(1.0);
+
+  const inputTokenObj = getToken(inputToken);
+  const outputTokenObj = getToken(outputToken);
 
   const handleSwap = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +96,7 @@ export default function TradePage() {
       inputAmount,
       outputAmount,
       slippage,
-      leverage: tradeType === 'leverage' ? leverage : 1,
+      leverage,
     });
   };
 
@@ -49,7 +112,7 @@ export default function TradePage() {
     if (!input || isNaN(Number(input))) return '';
     // Mock exchange rate
     const rate = outputToken === 'SOL' ? 0.0082 : 122;
-    return (Number(input) * rate).toFixed(outputToken === 'SOL' ? 4 : 2);
+    return (Number(input) * rate).toFixed(outputTokenObj.decimals);
   };
 
   const handleInputChange = (value: string) => {
@@ -57,293 +120,126 @@ export default function TradePage() {
     setOutputAmount(calculateOutput(value));
   };
 
+  const handleMax = () => {
+    // Mock max value
+    handleInputChange('100');
+  };
+  const handleHalf = () => {
+    // Mock half value
+    handleInputChange('50');
+  };
+
   return (
-    <div className="flex flex-col min-h-[calc(100vh-72px)]">
-      <div className="flex flex-col lg:flex-row p-4 gap-6">
-        {/* Chart Section - Left */}
-        <div className="w-full lg:w-2/3 bg-card rounded-xl overflow-hidden border border-border">
-          <div className="p-4 border-b border-border flex justify-between items-center">
-            <h2 className="text-xl font-bold font-mono">{outputToken}/USDC</h2>
-            <div className="flex items-center space-x-2">
-              <button className="px-3 py-1 bg-secondary rounded-md text-sm font-mono">1H</button>
-              <button className="px-3 py-1 bg-primary text-primary-foreground rounded-md text-sm font-mono">1D</button>
-              <button className="px-3 py-1 bg-secondary rounded-md text-sm font-mono">1W</button>
-              <button className="px-3 py-1 bg-secondary rounded-md text-sm font-mono">1M</button>
-            </div>
-          </div>
-          <div className="h-96 w-full p-4 flex items-center justify-center">
-            <div className="w-full h-full bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg relative overflow-hidden">
-              {/* Mock Chart - Would use a real chart library in production */}
-              <svg width="100%" height="100%" viewBox="0 0 500 300" preserveAspectRatio="none">
-                <path
-                  d="M0,150 C100,100 200,200 300,50 C400,150 500,100 500,150 L500,300 L0,300 Z"
-                  fill="url(#gradient)"
-                  fillOpacity="0.2"
-                />
-                <path
-                  d="M0,150 C100,100 200,200 300,50 C400,150 500,100 500,150"
-                  fill="none"
-                  stroke="url(#lineGradient)"
-                  strokeWidth="2"
-                />
-                <defs>
-                  <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.5" />
-                    <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
-                  </linearGradient>
-                  <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="var(--primary)" />
-                    <stop offset="100%" stopColor="var(--primary)" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              
-              {/* Price indicators */}
-              <div className="absolute top-4 left-4 bg-background/80 p-2 rounded backdrop-blur-sm">
-                <div className="text-xl font-mono font-bold">
-                  $122.45
+    <div className="flex flex-col min-h-[calc(100vh-72px)] bg-black">
+      <div className="flex flex-1 items-start justify-center pt-8" style={{ marginTop: '16px' }}>
+        <div className="w-full max-w-lg p-0 shadow-none border-none bg-transparent">
+          <h1 className="text-2xl font-bold font-mono mb-8 text-white">Swap</h1>
+          {connected ? (
+            <form onSubmit={handleSwap} className="space-y-0">
+              {/* Input */}
+              <div className="relative bg-[#23242a] rounded-2xl px-5 py-2 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <TokenDropdown selected={inputToken} onSelect={setInputToken} />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={handleHalf} className="text-xs px-2 py-1 rounded bg-[#23242a] border border-[#35363c] text-[#b5b5b5] hover:bg-[#35363c]">HALF</button>
+                    <button type="button" onClick={handleMax} className="text-xs px-2 py-1 rounded bg-[#23242a] border border-[#35363c] text-[#b5b5b5] hover:bg-[#35363c]">MAX</button>
+                  </div>
                 </div>
-                <div className="text-sm text-chart-2 font-mono">
-                  +2.4%
+                <input
+                  type="text"
+                  value={inputAmount}
+                  onChange={(e) => handleInputChange(e.target.value)}
+                  className="w-full bg-transparent text-3xl font-mono text-white outline-none placeholder:text-[#555]"
+                  placeholder="0.00"
+                />
+                <div className="text-xs text-[#b5b5b5] font-mono">
+                  ${inputAmount && !isNaN(Number(inputAmount)) ? (Number(inputAmount) * inputTokenObj.usd).toFixed(2) : '0.00'}
                 </div>
               </div>
-            </div>
-          </div>
-          
-          <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-card border border-border rounded-lg p-3">
-              <div className="text-xs text-muted-foreground mb-1 font-mono">24h Volume</div>
-              <div className="text-lg font-bold font-mono">$23.4M</div>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-3">
-              <div className="text-xs text-muted-foreground mb-1 font-mono">TVL</div>
-              <div className="text-lg font-bold font-mono">$102.7M</div>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-3">
-              <div className="text-xs text-muted-foreground mb-1 font-mono">24h High</div>
-              <div className="text-lg font-bold font-mono">$124.72</div>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-3">
-              <div className="text-xs text-muted-foreground mb-1 font-mono">24h Low</div>
-              <div className="text-lg font-bold font-mono">$119.85</div>
-            </div>
-          </div>
-        </div>
 
-        {/* Swap Box and Positions - Right */}
-        <div className="w-full lg:w-1/3 flex flex-col space-y-6">
-          {/* Swap Box */}
-          <div className="bg-card rounded-xl border border-border">
-            <div className="p-4 border-b border-border">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold font-mono">Swap</h2>
-                
-                <div className="flex rounded-lg overflow-hidden border border-border">
-                  <button 
-                    className={`px-4 py-1 text-sm font-mono ${tradeType === 'spot' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
-                    onClick={() => setTradeType('spot')}
-                  >
-                    Spot
-                  </button>
-                  <button 
-                    className={`px-4 py-1 text-sm font-mono ${tradeType === 'leverage' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}
-                    onClick={() => setTradeType('leverage')}
-                  >
-                    Leverage
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {connected ? (
-              <form onSubmit={handleSwap} className="p-4 space-y-4">
-                {/* Input amount */}
-                <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground font-mono">You pay</label>
-                  <div className="flex items-center p-3 bg-background rounded-lg border border-input">
-                    <input
-                      type="text"
-                      value={inputAmount}
-                      onChange={(e) => handleInputChange(e.target.value)}
-                      className="flex-grow bg-transparent focus:outline-none font-mono"
-                      placeholder="0.00"
-                    />
-                    <button
-                      type="button"
-                      className="flex items-center space-x-2 px-3 py-1 bg-secondary rounded-lg font-mono"
-                    >
-                      <span>{inputToken}</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Switch tokens button */}
-                <div className="flex justify-center">
-                  <button 
-                    type="button" 
-                    onClick={handleSwitchTokens}
-                    className="p-2 rounded-full bg-secondary border border-border"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M7 10v12"></path>
-                      <path d="M21 12H3"></path>
-                      <path d="m15 16 4-4-4-4"></path>
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Output amount */}
-                <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground font-mono">You receive</label>
-                  <div className="flex items-center p-3 bg-background rounded-lg border border-input">
-                    <input
-                      type="text"
-                      value={outputAmount}
-                      readOnly
-                      className="flex-grow bg-transparent focus:outline-none font-mono"
-                      placeholder="0.00"
-                    />
-                    <button
-                      type="button"
-                      className="flex items-center space-x-2 px-3 py-1 bg-secondary rounded-lg font-mono"
-                    >
-                      <span>{outputToken}</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Leverage slider (only for leverage trading) */}
-                {tradeType === 'leverage' && (
-                  <div className="space-y-2">
-                    <label className="text-sm text-muted-foreground font-mono">
-                      Leverage: {leverage}x
-                    </label>
-                    <input
-                      type="range"
-                      min="1"
-                      max={MAX_LEVERAGE}
-                      value={leverage}
-                      onChange={(e) => setLeverage(parseInt(e.target.value))}
-                      className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground font-mono">
-                      <span>1x</span>
-                      <span>{MAX_LEVERAGE}x</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Price info */}
-                <div className="p-3 bg-secondary/40 rounded-lg text-sm">
-                  <div className="flex justify-between font-mono">
-                    <span className="text-muted-foreground">Rate</span>
-                    <span>1 {inputToken} = {inputToken === 'USDC' ? '0.0082' : '122'} {outputToken}</span>
-                  </div>
-                  <div className="flex justify-between font-mono">
-                    <span className="text-muted-foreground">Fee</span>
-                    <span>0.3%</span>
-                  </div>
-                  <div className="flex justify-between font-mono">
-                    <span className="text-muted-foreground">Slippage Tolerance</span>
-                    <span>{slippage}%</span>
-                  </div>
-                </div>
-
-                {/* Submit button */}
+              {/* Switch button, layered between input and output */}
+              <div className="flex justify-center relative z-30" style={{ marginTop: '-18px', marginBottom: '-18px' }}>
                 <button
-                  type="submit"
-                  className="w-full p-3 bg-primary text-primary-foreground rounded-lg font-bold font-mono"
-                  disabled={!inputAmount || !outputAmount}
+                  type="button"
+                  onClick={handleSwitchTokens}
+                  className="bg-[#23242a] border-4 border-black rounded-full p-2 hover:bg-[#35363c] transition-colors shadow-lg relative z-30"
+                  aria-label="Switch tokens"
+                  style={{ boxShadow: '0 2px 12px 0 #0008' }}
                 >
-                  {tradeType === 'spot' ? 'Swap' : 'Open Leveraged Position'}
+                  <svg width="21" height="22" viewBox="0 0 21 22" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6.51043 7.47998V14.99H7.77043V7.47998L9.66043 9.36998L10.5505 8.47994L7.5859 5.51453C7.3398 5.26925 6.94114 5.26925 6.69504 5.51453L3.73047 8.47994L4.62051 9.36998L6.51043 7.47998Z" fill="currentColor"></path>
+                    <path d="M14.4902 14.52V7.01001H13.2302V14.52L11.3402 12.63L10.4502 13.5201L13.4148 16.4855C13.6609 16.7308 14.0595 16.7308 14.3056 16.4855L17.2702 13.5201L16.3802 12.63L14.4902 14.52Z" fill="currentColor"></path>
+                  </svg>
                 </button>
-              </form>
-            ) : (
-              <div className="p-8 flex flex-col items-center space-y-4">
-                <p className="text-center text-muted-foreground font-mono">
-                  Connect your wallet to start trading
-                </p>
-                <WalletMultiButton />
               </div>
-            )}
-          </div>
 
-          {/* Active Positions */}
-          <div className="bg-card rounded-xl border border-border">
-            <div className="p-4 border-b border-border">
-              <h2 className="text-xl font-bold font-mono">Your Positions</h2>
+              {/* Output */}
+              <div className="bg-[#23242a] rounded-2xl px-5 py-2 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <TokenDropdown selected={outputToken} onSelect={setOutputToken} />
+                </div>
+                <input
+                  type="text"
+                  value={outputAmount}
+                  readOnly
+                  className="w-full bg-transparent text-3xl font-mono text-white outline-none placeholder:text-[#555]"
+                  placeholder="0.00"
+                />
+                <div className="text-xs text-[#b5b5b5] font-mono">
+                  ${outputAmount && !isNaN(Number(outputAmount)) ? (Number(outputAmount) * outputTokenObj.usd).toFixed(2) : '0.00'}
+                </div>
+              </div>
+
+              {/* Add vertical space before leverage */}
+              <div style={{ marginTop: '18px' }} />
+
+              {/* Leverage Slider */}
+              <div className="flex flex-col gap-2 bg-[#23242a] rounded-2xl p-5">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-mono text-sm text-[#b5b5b5]">Leverage</span>
+                  <span className="font-mono text-sm text-white">{leverage.toFixed(1)}x{leverage === 1.0 ? ' (Spot)' : ''}</span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={MAX_LEVERAGE}
+                  step={0.1}
+                  value={leverage}
+                  onChange={e => setLeverage(Number(e.target.value))}
+                  className="w-full accent-[#00ffb3]"
+                />
+              </div>
+
+              {/* Add vertical space before info row */}
+              <div style={{ marginTop: '18px' }} />
+
+              {/* Info Row */}
+              <div className="flex justify-between items-center text-xs font-mono text-[#b5b5b5] px-2">
+                <span>Rate: <span className="text-white">1 {inputToken} = {inputToken === 'USDC' ? '0.0082' : '122'} {outputToken}</span></span>
+                <span>Impact: <span className="text-[#00ffb3]">0.1%</span></span>
+                <span>Fee: <span className="text-white">~$0.01</span></span>
+              </div>
+
+              {/* Add vertical space before swap button */}
+              <div style={{ marginTop: '18px' }} />
+
+              {/* Swap Button */}
+              <button
+                type="submit"
+                className="w-full p-4 mt-2 bg-[#00ffb3] text-black rounded-2xl font-bold font-mono text-lg hover:bg-[#00d49c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!inputAmount || !outputAmount}
+              >
+                Swap
+              </button>
+            </form>
+          ) : (
+            <div className="p-8 flex flex-col items-center space-y-4">
+              <p className="text-center text-muted-foreground font-mono text-white">
+                Connect your wallet to start trading
+              </p>
+              <WalletMultiButton />
             </div>
-            
-            {connected ? (
-              <div className="p-4 space-y-4">
-                <div className="p-4 bg-card rounded-lg border border-border">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium font-mono">SOL/USDC</span>
-                    <span className="px-2 py-1 bg-chart-2/20 text-chart-2 rounded text-xs font-mono">LONG</span>
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between font-mono">
-                      <span className="text-muted-foreground">Size</span>
-                      <span>$500</span>
-                    </div>
-                    <div className="flex justify-between font-mono">
-                      <span className="text-muted-foreground">Leverage</span>
-                      <span>5x</span>
-                    </div>
-                    <div className="flex justify-between font-mono">
-                      <span className="text-muted-foreground">Entry Price</span>
-                      <span>$118.24</span>
-                    </div>
-                    <div className="flex justify-between font-mono">
-                      <span className="text-muted-foreground">PnL</span>
-                      <span className="text-chart-2">+$27.43 (4.1%)</span>
-                    </div>
-                  </div>
-                  <button className="w-full mt-3 py-2 bg-secondary hover:bg-secondary/80 rounded-lg text-sm font-mono">
-                    Close Position
-                  </button>
-                </div>
-                
-                <div className="p-4 bg-card rounded-lg border border-border">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium font-mono">ETH/USDC</span>
-                    <span className="px-2 py-1 bg-destructive/20 text-destructive rounded text-xs font-mono">SHORT</span>
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between font-mono">
-                      <span className="text-muted-foreground">Size</span>
-                      <span>$350</span>
-                    </div>
-                    <div className="flex justify-between font-mono">
-                      <span className="text-muted-foreground">Leverage</span>
-                      <span>3x</span>
-                    </div>
-                    <div className="flex justify-between font-mono">
-                      <span className="text-muted-foreground">Entry Price</span>
-                      <span>$3,495.62</span>
-                    </div>
-                    <div className="flex justify-between font-mono">
-                      <span className="text-muted-foreground">PnL</span>
-                      <span className="text-destructive">-$14.87 (-1.4%)</span>
-                    </div>
-                  </div>
-                  <button className="w-full mt-3 py-2 bg-secondary hover:bg-secondary/80 rounded-lg text-sm font-mono">
-                    Close Position
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="p-4">
-                <p className="text-muted-foreground font-mono">Connect your wallet to view positions</p>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </div>

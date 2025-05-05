@@ -1,89 +1,117 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useActiveWallet } from '@/hooks/useActiveWallet';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { truncateAddress } from '@/utils/format';
-import { useTheme } from '@/providers/ThemeProvider';
+import { Avatar } from '@/components/avatars/Avatar';
 
 export default function Navbar() {
   const { publicKey, connected, disconnect } = useActiveWallet();
   const { setVisible } = useWalletModal();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
+  const [isWalletMenuOpen, setIsWalletMenuOpen] = useState(false);
+  const walletMenuRef = useRef<HTMLDivElement>(null);
 
-  const handleConnectWallet = () => {
-    setVisible(true);
-  };
+  // Close wallet menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (walletMenuRef.current && !walletMenuRef.current.contains(event.target as Node)) {
+        setIsWalletMenuOpen(false);
+      }
+    }
 
-  const handleDisconnect = () => {
-    disconnect && disconnect();
-  };
-
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
-    <nav className="w-full py-4 px-6 border-b border-border flex items-center justify-between">
-      <div className="flex items-center">
+    <nav className="w-full py-2 px-6 border-b border-border flex items-center relative" style={{minHeight: '48px'}}>
+      {/* Left: Logo and Menu */}
+      <div className="flex items-center space-x-8 min-w-[260px] justify-start">
         <Link href="/" className="flex items-center space-x-2">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent font-mono">Whiplash</h1>
         </Link>
+        <div className="hidden md:flex items-center space-x-8">
+          <Link href="/trade" className="text-foreground hover:text-primary transition font-mono">
+            Trade
+          </Link>
+          <Link href="/launch" className="text-foreground hover:text-primary transition font-mono">
+            Launch
+          </Link>
+          <Link href="/docs" className="text-foreground hover:text-primary transition font-mono">
+            Docs
+          </Link>
+        </div>
       </div>
 
-      <div className="hidden md:flex items-center space-x-8">
-        <Link href="/trade" className="text-foreground hover:text-primary transition font-mono">
-          Trade
-        </Link>
-        <Link href="/launch" className="text-foreground hover:text-primary transition font-mono">
-          Launch
-        </Link>
-        <Link href="/docs" className="text-foreground hover:text-primary transition font-mono">
-          Docs
-        </Link>
+      {/* Center: Search Bar (absolutely centered) */}
+      <div className="hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md" style={{zIndex: 10}}>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search token or address"
+            className="w-full px-4 py-1.5 bg-card border border-border rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4 absolute right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
       </div>
 
-      <div className="flex items-center space-x-4">
-        <button 
-          onClick={toggleTheme}
-          className="p-2 rounded-full bg-card border border-border"
-          aria-label="Toggle theme"
-        >
-          {theme === 'dark' ? (
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground">
-              <circle cx="12" cy="12" r="5" />
-              <line x1="12" y1="1" x2="12" y2="3" />
-              <line x1="12" y1="21" x2="12" y2="23" />
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-              <line x1="1" y1="12" x2="3" y2="12" />
-              <line x1="21" y1="12" x2="23" y2="12" />
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-            </svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-            </svg>
-          )}
-        </button>
-        
+      {/* Right: Wallet/Theme Controls */}
+      <div className="flex items-center space-x-4 min-w-[260px] justify-end ml-auto">
         {connected && publicKey ? (
-          <div className="flex items-center space-x-2">
+          <div className="relative" ref={walletMenuRef}>
             <button 
-              className="px-4 py-2 bg-card rounded-full text-sm text-foreground border border-primary font-mono"
-              onClick={handleDisconnect}
+              onClick={() => setIsWalletMenuOpen(!isWalletMenuOpen)}
+              className="flex items-center space-x-2 hover:opacity-80 transition p-2 rounded-full"
+              style={{ height: 32, width: 'auto' }}
             >
-              {truncateAddress(publicKey.toString())}
+              <Avatar publicKey={publicKey.toString()} size={32} />
+              <span className="text-sm text-foreground font-mono">
+                {truncateAddress(publicKey.toString())}
+              </span>
             </button>
+
+            {isWalletMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-card rounded-md shadow-lg py-1 z-50">
+                <Link 
+                  href={`/profile/${publicKey.toString()}`}
+                  className="block px-4 py-2 text-sm text-foreground hover:bg-primary/10 transition"
+                  onClick={() => setIsWalletMenuOpen(false)}
+                >
+                  View Profile
+                </Link>
+                <button
+                  onClick={() => {
+                    disconnect && disconnect();
+                    setIsWalletMenuOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-sm text-foreground hover:bg-primary/10 transition"
+                >
+                  Disconnect
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <button 
             className="px-6 py-2 bg-primary text-primary-foreground rounded-full font-medium hover:opacity-90 transition font-mono"
-            onClick={handleConnectWallet}
+            onClick={() => setVisible(true)}
           >
             Connect Wallet
           </button>
