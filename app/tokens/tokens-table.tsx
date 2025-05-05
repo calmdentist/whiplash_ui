@@ -5,6 +5,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { Metaplex } from "@metaplex-foundation/js";
 import Image from "next/image";
 import { RPC_URL } from "@/constants/constants";
+import { getRandomPastelColor } from "@/lib/utils";
 
 interface Token {
   address: string;
@@ -121,7 +122,7 @@ export default function TokensTable() {
           key={token.address} 
           className="relative group p-6 transition-all hover:brightness-110 hover:scale-[1.02] rounded-lg"
           style={{ 
-            backgroundColor: `hsl(${Math.random() * 360}, 70%, 20%)`,
+            backgroundColor: getRandomPastelColor(),
             boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.1)',
           }}
         >
@@ -139,10 +140,10 @@ export default function TokensTable() {
               <div className="w-16 h-16 bg-white/10 rounded-full" />
             )}
             <div>
-              <h2 className="text-xl font-semibold text-white line-clamp-1">
+              <h2 className="text-xl font-semibold text-black line-clamp-1">
                 {token.metadata?.name || "Unknown"}
               </h2>
-              <p className="text-white/70 text-sm">
+              <p className="text-black/70 text-sm">
                 {token.metadata?.symbol || "Unknown"}
               </p>
             </div>
@@ -150,12 +151,12 @@ export default function TokensTable() {
           
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-white/70">Market Cap</p>
-              <p className="font-semibold text-white">{calculateMarketCap(token)}</p>
+              <p className="text-black/70">Market Cap</p>
+              <p className="font-semibold text-black">{calculateMarketCap(token)}</p>
             </div>
             <div>
-              <p className="text-white/70">Total Value</p>
-              <p className="font-semibold text-white">
+              <p className="text-black/70">Total Value</p>
+              <p className="font-semibold text-black">
                 ${(Number(token.lamports) / 1e9 * (solPrice || 0)).toFixed(2)}
               </p>
             </div>

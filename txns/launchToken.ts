@@ -22,8 +22,10 @@ import { PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID } from '@metaplex-foundation/mp
 import { getOptimalComputeUnits } from '@/utils/estimateComputeUnits';
 import { connection } from '@/utils/connection';
 import BN from 'bn.js';
-import { createLaunchInstruction } from '@/idl/whiplash';
+import { Program, AnchorProvider, Wallet } from '@coral-xyz/anchor';
 import { WalletContextState } from '@solana/wallet-adapter-react';
+import IDL from '@/idl/whiplash.json';
+import { Idl } from '@coral-xyz/anchor';
 
 interface LaunchTokenParams {
   name: string;
@@ -41,26 +43,32 @@ export async function createLaunchTokenTransaction({
   metadataUri,
   virtualSolReserve,
   wallet
-}: LaunchTokenParams): Promise<Transaction> {
+}: LaunchTokenParams): Promise<{ transaction: Transaction; mintKeypair: Keypair }> {
   if (!wallet.publicKey) {
     throw new Error('Wallet not connected');
   }
 
   // Create mint account
   const mintKeypair = Keypair.generate();
-  const mintRent = await getMinimumBalanceForRentExemptMint(connection);
+  console.log('Mint address:', mintKeypair.publicKey.toBase58());
   
-  // Create token vault
-  const tokenVault = await getAssociatedTokenAddress(
-    mintKeypair.publicKey,
-    wallet.publicKey,
-    true
-  );
-
   // Create pool PDA
-  const [pool] = PublicKey.findProgramAddressSync(
+  const [pool, poolBump] = PublicKey.findProgramAddressSync(
     [Buffer.from('pool'), mintKeypair.publicKey.toBuffer()],
     new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ')
+  );
+
+  console.log('Pool address:', pool.toBase58());
+  console.log('Pool bump:', poolBump);
+
+  // Create token vault PDA (matching deploy script)
+  const [tokenVault] = PublicKey.findProgramAddressSync(
+    [
+      pool.toBuffer(),
+      TOKEN_PROGRAM_ID.toBuffer(),
+      mintKeypair.publicKey.toBuffer(),
+    ],
+    ASSOCIATED_TOKEN_PROGRAM_ID
   );
 
   // Create metadata PDA
@@ -76,63 +84,39 @@ export async function createLaunchTokenTransaction({
   // Create the transaction
   const transaction = new Transaction();
 
-  // Add create mint account instruction
-  transaction.add(
-    SystemProgram.createAccount({
-      fromPubkey: wallet.publicKey,
-      newAccountPubkey: mintKeypair.publicKey,
-      space: MINT_SIZE,
-      lamports: mintRent,
-      programId: TOKEN_PROGRAM_ID,
-    })
-  );
+  // Create Anchor provider and program
+  const anchorWallet = {
+    publicKey: wallet.publicKey,
+    signTransaction: wallet.signTransaction,
+    signAllTransactions: wallet.signAllTransactions,
+  } as Wallet;
 
-  // Add initialize mint instruction
-  transaction.add(
-    createInitializeMintInstruction(
-      mintKeypair.publicKey,
-      9, // decimals
-      wallet.publicKey,
-      wallet.publicKey,
-      TOKEN_PROGRAM_ID
+  const provider = new AnchorProvider(connection, anchorWallet, {});
+  const program = new Program(IDL as Idl, new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ'), provider);
+
+  // Add launch instruction using Anchor
+  const launchIx = await program.methods
+    .launch(
+      new BN(virtualSolReserve * LAMPORTS_PER_SOL),
+      name,
+      symbol,
+      metadataUri
     )
-  );
-
-  // Add create token vault instruction
-  transaction.add(
-    createAssociatedTokenAccountInstruction(
-      wallet.publicKey,
+    .accounts({
+      authority: wallet.publicKey,
+      tokenMint: mintKeypair.publicKey,
+      pool,
       tokenVault,
-      wallet.publicKey,
-      mintKeypair.publicKey,
-      TOKEN_PROGRAM_ID,
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    )
-  );
+      metadata,
+      systemProgram: SystemProgram.programId,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      rent: SYSVAR_RENT_PUBKEY,
+      tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+    })
+    .instruction();
 
-  // Add launch instruction
-  transaction.add(
-    createLaunchInstruction(
-      {
-        authority: wallet.publicKey,
-        tokenMint: mintKeypair.publicKey,
-        pool,
-        tokenVault,
-        metadata,
-        systemProgram: SystemProgram.programId,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-        rent: SYSVAR_RENT_PUBKEY,
-        tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
-      },
-      {
-        virtualSolReserve: new BN(virtualSolReserve * LAMPORTS_PER_SOL),
-        tokenName: name,
-        tokenTicker: symbol,
-        metadataUri,
-      }
-    )
-  );
+  transaction.add(launchIx);
 
   // Get optimal compute units
   let computeUnits = 500_000;
@@ -155,10 +139,10 @@ export async function createLaunchTokenTransaction({
   }
 
   // Add recent blockhash
-  transaction.recentBlockhash = (
-    await connection.getLatestBlockhash()
-  ).blockhash;
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+  transaction.recentBlockhash = blockhash;
   transaction.feePayer = wallet.publicKey;
+  transaction.lastValidBlockHeight = lastValidBlockHeight;
 
-  return transaction;
+  return { transaction, mintKeypair };
 } 

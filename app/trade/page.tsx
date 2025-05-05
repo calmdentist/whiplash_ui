@@ -52,7 +52,7 @@ function TokenDropdown({ selected, onSelect }: { selected: string, onSelect: (sy
     <div className="relative">
       <button
         type="button"
-        className="flex items-center gap-2 px-2 py-1 rounded bg-transparent hover:bg-[#23242a]"
+        className="flex items-center gap-2 px-2 py-1 rounded-2xl bg-[#1a1b20] hover:bg-[#23242a] cursor-pointer"
         onClick={() => setOpen((v) => !v)}
       >
         <Avatar publicKey={selected} size={28} />
@@ -60,7 +60,7 @@ function TokenDropdown({ selected, onSelect }: { selected: string, onSelect: (sy
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="ml-1 text-white"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
       </button>
       {open && (
-        <div className="absolute z-20 mt-2 w-64 p-2 bg-[#181A20] border border-[#23242a] rounded-xl shadow-xl">
+        <div className="absolute z-20 mt-2 w-64 p-2 bg-[#181A20] border border-[#23242a] rounded-2xl shadow-xl">
           <input
             autoFocus
             className="w-full mb-2 px-3 py-2 rounded bg-[#23242a] text-white placeholder:text-[#888] outline-none"
@@ -148,23 +148,28 @@ export default function TradePage() {
           {connected ? (
             <form onSubmit={handleSwap} className="space-y-0">
               {/* Input */}
-              <div className="relative bg-[#23242a] rounded-2xl px-5 py-2 flex flex-col gap-2">
+              <div className="relative bg-[#23242a] rounded-2xl px-5 py-2 pb-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                  <TokenDropdown selected={inputToken} onSelect={setInputToken} />
+                  <span className="text-white font-mono text-sm">Selling</span>
                   <div className="flex gap-2">
                     <button type="button" onClick={handleHalf} className="text-xs px-2 py-1 rounded bg-[#23242a] border border-[#35363c] text-[#b5b5b5] hover:bg-[#35363c]">HALF</button>
                     <button type="button" onClick={handleMax} className="text-xs px-2 py-1 rounded bg-[#23242a] border border-[#35363c] text-[#b5b5b5] hover:bg-[#35363c]">MAX</button>
                   </div>
                 </div>
-                <input
-                  type="text"
-                  value={inputAmount}
-                  onChange={(e) => handleInputChange(e.target.value)}
-                  className="w-full bg-transparent text-3xl font-mono text-white outline-none placeholder:text-[#555]"
-                  placeholder="0.00"
-                />
-                <div className="text-xs text-[#b5b5b5] font-mono">
-                  ${inputAmount && !isNaN(Number(inputAmount)) ? (Number(inputAmount) * inputTokenObj.usd).toFixed(2) : '0.00'}
+                <div className="flex items-center justify-between">
+                  <TokenDropdown selected={inputToken} onSelect={setInputToken} />
+                  <div className="flex flex-col items-end">
+                    <input
+                      type="text"
+                      value={inputAmount}
+                      onChange={(e) => handleInputChange(e.target.value)}
+                      className="w-48 bg-transparent text-3xl font-mono text-white outline-none placeholder:text-[#555] text-right"
+                      placeholder="0.00"
+                    />
+                    <div className="text-xs text-[#b5b5b5] font-mono">
+                      ${inputAmount && !isNaN(Number(inputAmount)) ? (Number(inputAmount) * inputTokenObj.usd).toFixed(2) : '0.00'}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -185,19 +190,24 @@ export default function TradePage() {
               </div>
 
               {/* Output */}
-              <div className="bg-[#23242a] rounded-2xl px-5 py-2 flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                  <TokenDropdown selected={outputToken} onSelect={setOutputToken} />
+              <div className="bg-[#23242a] rounded-2xl px-5 py-2 pb-4 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-white font-mono text-sm">Buying</span>
                 </div>
-                <input
-                  type="text"
-                  value={outputAmount}
-                  readOnly
-                  className="w-full bg-transparent text-3xl font-mono text-white outline-none placeholder:text-[#555]"
-                  placeholder="0.00"
-                />
-                <div className="text-xs text-[#b5b5b5] font-mono">
-                  ${outputAmount && !isNaN(Number(outputAmount)) ? (Number(outputAmount) * outputTokenObj.usd).toFixed(2) : '0.00'}
+                <div className="flex items-center justify-between">
+                  <TokenDropdown selected={outputToken} onSelect={setOutputToken} />
+                  <div className="flex flex-col items-end">
+                    <input
+                      type="text"
+                      value={outputAmount}
+                      readOnly
+                      className="w-48 bg-transparent text-3xl font-mono text-white outline-none placeholder:text-[#555] text-right"
+                      placeholder="0.00"
+                    />
+                    <div className="text-xs text-[#b5b5b5] font-mono">
+                      ${outputAmount && !isNaN(Number(outputAmount)) ? (Number(outputAmount) * outputTokenObj.usd).toFixed(2) : '0.00'}
+                    </div>
+                  </div>
                 </div>
               </div>
 

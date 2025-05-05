@@ -96,7 +96,7 @@ export default function LaunchPage() {
         }
       }
 
-      const transaction = await createLaunchTokenTransaction({
+      const { transaction, mintKeypair } = await createLaunchTokenTransaction({
         name: tokenName,
         symbol: tokenTicker,
         description: 'Token launched on Whiplash',
@@ -105,7 +105,7 @@ export default function LaunchPage() {
         wallet
       });
 
-      const signature = await sendTransactionWithPriorityFee(transaction);
+      const signature = await sendTransactionWithPriorityFee(transaction, mintKeypair);
       console.log("Transaction signature:", signature);
 
       const success = await showTransactionToast(signature, connection);

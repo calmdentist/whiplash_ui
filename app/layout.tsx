@@ -3,6 +3,7 @@ import "./globals.css";
 import Providers from "@/providers/Providers";
 import Navbar from "@/components/Navbar";
 import { decimaMono } from "./fonts";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Whiplash - Leverage Trading AMM on Solana",
@@ -26,6 +27,7 @@ export default function RootLayout({
               {children}
             </main>
           </div>
+          <Toaster position="top-right" />
         </Providers>
       </body>
     </html>
