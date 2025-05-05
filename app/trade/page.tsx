@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { MAX_LEVERAGE } from '@/constants/constants';
 import { Avatar } from '../../components/avatars/Avatar';
 import dynamic from 'next/dynamic';
+import SearchBar from '@/components/SearchBar';
 
 // Create a client-side only wallet button component
 const WalletButton = dynamic(
@@ -46,10 +47,21 @@ function getToken(symbol: string) {
 
 function TokenDropdown({ selected, onSelect }: { selected: string, onSelect: (symbol: string) => void }) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const filtered = trendingTokens.filter(t => t.symbol.toLowerCase().includes(search.toLowerCase()));
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button
         type="button"
         className="flex items-center gap-2 px-2 py-1 rounded-2xl bg-[#1a1b20] hover:bg-[#23242a] cursor-pointer"
@@ -60,26 +72,34 @@ function TokenDropdown({ selected, onSelect }: { selected: string, onSelect: (sy
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="ml-1 text-white"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
       </button>
       {open && (
-        <div className="absolute z-20 mt-2 w-64 p-2 bg-[#181A20] border border-[#23242a] rounded-2xl shadow-xl">
-          <input
-            autoFocus
-            className="w-full mb-2 px-3 py-2 rounded bg-[#23242a] text-white placeholder:text-[#888] outline-none"
-            placeholder="search token or address"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
-            {filtered.map(token => (
-              <button
-                key={token.symbol}
-                type="button"
-                onClick={() => { onSelect(token.symbol); setOpen(false); setSearch(''); }}
-                className="flex items-center gap-2 px-2 py-2 rounded hover:bg-[#23242a] cursor-pointer"
-              >
-                <Avatar publicKey={token.symbol} size={24} />
-                <span className="text-white font-mono">{token.symbol}</span>
-              </button>
-            ))}
+        <div className="absolute z-50 mt-2 w-64 bg-[#181A20] border border-[#23242a] rounded-2xl shadow-xl">
+          <div className="p-2">
+            <div className="relative">
+              <SearchBar
+                onSelect={(result) => {
+                  if (result.type === 'token' && result.symbol) {
+                    onSelect(result.symbol);
+                    setOpen(false);
+                  }
+                }}
+                className="mb-2"
+                disableClickOutside
+                placeholder="Search token"
+              />
+            </div>
+            <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+              {trendingTokens.map(token => (
+                <button
+                  key={token.symbol}
+                  type="button"
+                  onClick={() => { onSelect(token.symbol); setOpen(false); }}
+                  className="flex items-center gap-2 px-2 py-2 rounded hover:bg-[#23242a] cursor-pointer"
+                >
+                  <Avatar publicKey={token.symbol} size={24} />
+                  <span className="text-white font-mono">{token.symbol}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -152,8 +172,8 @@ export default function TradePage() {
                 <div className="flex items-center justify-between">
                   <span className="text-white font-mono text-sm">Selling</span>
                   <div className="flex gap-2">
-                    <button type="button" onClick={handleHalf} className="text-xs px-2 py-1 rounded bg-[#23242a] border border-[#35363c] text-[#b5b5b5] hover:bg-[#35363c]">HALF</button>
-                    <button type="button" onClick={handleMax} className="text-xs px-2 py-1 rounded bg-[#23242a] border border-[#35363c] text-[#b5b5b5] hover:bg-[#35363c]">MAX</button>
+                    <button type="button" onClick={handleHalf} className="text-xs px-2 py-1 rounded bg-[#1a1b20] text-[#b5b5b5] hover:bg-[#23242a]">HALF</button>
+                    <button type="button" onClick={handleMax} className="text-xs px-2 py-1 rounded bg-[#1a1b20] text-[#b5b5b5] hover:bg-[#23242a]">MAX</button>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">

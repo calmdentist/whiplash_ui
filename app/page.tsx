@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import TokensTable from "./tokens/tokens-table";
+import TokensTable from "@/components/TokenGrid";
 
 export const metadata: Metadata = {
   title: "Whiplash",

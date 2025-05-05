@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Connection, PublicKey } from "@solana/web3.js";
-import { Metaplex } from "@metaplex-foundation/js";
 import Image from "next/image";
-import { RPC_URL } from "@/constants/constants";
 import { getRandomPastelColor } from "@/lib/utils";
 
 interface Token {
@@ -46,35 +43,7 @@ export default function TokensTable() {
       try {
         const response = await fetch("/api/pools");
         const { pools } = await response.json();
-
-        // Initialize Metaplex
-        const connection = new Connection(RPC_URL);
-        const metaplex = new Metaplex(connection);
-
-        // Fetch metadata for each token
-        const tokensWithMetadata = await Promise.all(
-          pools.map(async (pool: Token) => {
-            try {
-              const metadata = await metaplex
-                .nfts()
-                .findByMint({ mintAddress: new PublicKey(pool.tokenYMint) });
-              
-              return {
-                ...pool,
-                metadata: {
-                  name: metadata.name,
-                  symbol: metadata.symbol,
-                  image: metadata.json?.image || "",
-                },
-              };
-            } catch (error) {
-              console.error(`Error fetching metadata for ${pool.tokenYMint}:`, error);
-              return pool;
-            }
-          })
-        );
-
-        setTokens(tokensWithMetadata);
+        setTokens(pools);
       } catch (error) {
         console.error("Error fetching tokens:", error);
         setError("Failed to fetch tokens");
@@ -116,19 +85,19 @@ export default function TokensTable() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {tokens.map((token) => (
         <div 
           key={token.address} 
-          className="relative group p-6 transition-all hover:brightness-110 hover:scale-[1.02] rounded-lg"
+          className="relative group p-4 transition-all hover:brightness-110 hover:scale-[1.02] rounded-lg cursor-pointer"
           style={{ 
             backgroundColor: getRandomPastelColor(),
             boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.1)',
           }}
         >
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-2 mb-4">
             {token.metadata?.image ? (
-              <div className="relative w-16 h-16">
+              <div className="relative w-12 h-12">
                 <Image
                   src={token.metadata.image}
                   alt={token.metadata.name || "Token"}
@@ -137,28 +106,32 @@ export default function TokensTable() {
                 />
               </div>
             ) : (
-              <div className="w-16 h-16 bg-white/10 rounded-full" />
+              <div className="w-12 h-12 bg-white/10 rounded-full" />
             )}
             <div>
-              <h2 className="text-xl font-semibold text-black line-clamp-1">
+              <h2 className="text-lg font-semibold text-black line-clamp-1">
                 {token.metadata?.name || "Unknown"}
               </h2>
-              <p className="text-black/70 text-sm">
+              <p className="text-black/70 text-xs">
                 {token.metadata?.symbol || "Unknown"}
               </p>
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-black/70">Market Cap</p>
-              <p className="font-semibold text-black">{calculateMarketCap(token)}</p>
+          <div className="grid grid-cols-3 gap-2 text-sm">
+            <div className="space-y-1">
+              <p className="text-black/70 text-xs">Market Cap</p>
+              <p className="font-semibold text-black text-xs">{calculateMarketCap(token)}</p>
             </div>
-            <div>
-              <p className="text-black/70">Total Value</p>
-              <p className="font-semibold text-black">
+            <div className="space-y-1">
+              <p className="text-black/70 text-xs">Liquidity</p>
+              <p className="font-semibold text-black text-xs">
                 ${(Number(token.lamports) / 1e9 * (solPrice || 0)).toFixed(2)}
               </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-black/70 text-xs">24h Vol</p>
+              <p className="font-semibold text-black text-xs">$1.2M</p>
             </div>
           </div>
         </div>
