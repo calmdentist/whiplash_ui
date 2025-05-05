@@ -4,9 +4,27 @@ import { useState, useRef } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { useConnection } from '@solana/wallet-adapter-react';
+import { createLaunchTokenTransaction } from '@/txns/launchToken';
+import { usePriorityFeeTransaction } from '@/hooks/usePriorityFeeTransaction';
+import { showTransactionToast } from '@/utils/transactionToast';
+import { useActiveWallet } from '@/hooks/useActiveWallet';
+import dynamic from 'next/dynamic';
+
+// Create a client-side only wallet button component
+const WalletButton = dynamic(
+  () => Promise.resolve(() => (
+    <div className="transform hover:scale-105 transition-all duration-300">
+      <WalletMultiButton />
+    </div>
+  )),
+  { ssr: false }
+);
 
 export default function LaunchPage() {
-  const { connected } = useWallet();
+  const wallet = useActiveWallet();
   const [tokenName, setTokenName] = useState('');
   const [tokenTicker, setTokenTicker] = useState('');
   const [virtualLiquidity, setVirtualLiquidity] = useState('');
@@ -16,6 +34,10 @@ export default function LaunchPage() {
   const [telegram, setTelegram] = useState('');
   const [showOptional, setShowOptional] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const { connection } = useConnection();
+  const { sendTransactionWithPriorityFee } = usePriorityFeeTransaction();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -33,14 +55,71 @@ export default function LaunchPage() {
     fileInputRef.current?.click();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({
-      tokenName,
-      tokenTicker,
-      virtualLiquidity,
-      hasImage: !!tokenImage
-    });
+    setIsSubmitting(true);
+    
+    try {
+      let metadataUri = '';
+      if (tokenImage) {
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', tokenImage);
+        uploadFormData.append('name', tokenName);
+        uploadFormData.append('symbol', tokenTicker);
+        uploadFormData.append('description', 'Token launched on Whiplash');
+        uploadFormData.append('website', website);
+        uploadFormData.append('twitter', twitter);
+        uploadFormData.append('telegram', telegram);
+
+        const response = await fetch('/api/upload-ipfs', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to upload image');
+        }
+
+        const data = await response.json();
+        console.log("IPFS Upload Response:", data);
+
+        if (data.error) {
+          throw new Error(`Upload failed: ${data.error}`);
+        }
+
+        metadataUri = data.metadataUri;
+        if (!metadataUri) {
+          throw new Error('No metadata URI found in response');
+        }
+      }
+
+      const transaction = await createLaunchTokenTransaction({
+        name: tokenName,
+        symbol: tokenTicker,
+        description: 'Token launched on Whiplash',
+        metadataUri,
+        virtualSolReserve: parseFloat(virtualLiquidity),
+        wallet
+      });
+
+      const signature = await sendTransactionWithPriorityFee(transaction);
+      console.log("Transaction signature:", signature);
+
+      const success = await showTransactionToast(signature, connection);
+      
+      if (success) {
+        router.push('/');
+      }
+    } catch (error) {
+      console.error("Full error:", error);
+      toast.error("Error launching token", {
+        description: error instanceof Error 
+          ? `${error.message}\n${error.stack}` 
+          : "Unknown error occurred",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -49,7 +128,7 @@ export default function LaunchPage() {
         <div className="w-full max-w-lg p-0 shadow-none border-none bg-transparent">
           <h1 className="text-2xl font-bold font-mono mb-8 text-white">Launch Token</h1>
           
-          {connected ? (
+          {wallet.connected ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Image Upload */}
               <div className="bg-[#23242a] rounded-2xl p-6">
@@ -209,7 +288,7 @@ export default function LaunchPage() {
               
               <button
                 type="submit"
-                className="w-full p-4 rounded-2xl font-bold text-base transition-all duration-300 transform hover:scale-105 hover:shadow-lg font-mono bg-[#00ffb3] text-black"
+                className="w-full p-4 rounded-2xl font-bold text-base transition-all duration-300 transform hover:scale-105 hover:shadow-lg font-mono bg-[#00ffb3] text-black cursor-pointer"
               >
                 🚀 Launch Token 🚀
               </button>
@@ -221,9 +300,7 @@ export default function LaunchPage() {
                 <p className="text-base text-white font-mono mb-4">
                   Connect your wallet to launch a token
                 </p>
-                <div className="transform hover:scale-105 transition-all duration-300">
-                  <WalletMultiButton />
-                </div>
+                <WalletButton />
               </div>
               
               <div className="flex space-x-3 mt-4">

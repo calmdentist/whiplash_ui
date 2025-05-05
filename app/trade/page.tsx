@@ -5,6 +5,17 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { MAX_LEVERAGE } from '@/constants/constants';
 import { Avatar } from '../../components/avatars/Avatar';
+import dynamic from 'next/dynamic';
+
+// Create a client-side only wallet button component
+const WalletButton = dynamic(
+  () => Promise.resolve(() => (
+    <div className="transform hover:scale-105 transition-all duration-300">
+      <WalletMultiButton />
+    </div>
+  )),
+  { ssr: false }
+);
 
 // Mock chart data
 const mockChartData = [
@@ -206,7 +217,10 @@ export default function TradePage() {
                   step={0.1}
                   value={leverage}
                   onChange={e => setLeverage(Number(e.target.value))}
-                  className="w-full accent-[#00ffb3]"
+                  className="w-full leverage-slider"
+                  style={{
+                    background: `linear-gradient(to right, #00ffb3 ${(100 * (leverage - 1) / (MAX_LEVERAGE - 1)).toFixed(1)}%, #35363c ${(100 * (leverage - 1) / (MAX_LEVERAGE - 1)).toFixed(1)}%)`
+                  }}
                 />
               </div>
 
@@ -226,7 +240,7 @@ export default function TradePage() {
               {/* Swap Button */}
               <button
                 type="submit"
-                className="w-full p-4 mt-2 bg-[#00ffb3] text-black rounded-2xl font-bold font-mono text-lg hover:bg-[#00d49c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full p-4 mt-2 bg-[#00ffb3] text-black rounded-2xl font-bold font-mono text-lg hover:bg-[#00d49c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 disabled={!inputAmount || !outputAmount}
               >
                 Swap
@@ -237,7 +251,7 @@ export default function TradePage() {
               <p className="text-center text-muted-foreground font-mono text-white">
                 Connect your wallet to start trading
               </p>
-              <WalletMultiButton />
+              <WalletButton />
             </div>
           )}
         </div>

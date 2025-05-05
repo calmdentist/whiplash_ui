@@ -1,7 +1,7 @@
 import { Connection } from '@solana/web3.js';
 
 // Default RPC URL for Solana
-export const RPC_URL = "https://api.mainnet-beta.solana.com";
+export const RPC_URL = "http://127.0.0.1:8899";
 
 // Use environment variable if available, otherwise fallback to default
 export const RPC_ENDPOINT = process.env.NEXT_PUBLIC_RPC_ENDPOINT 
