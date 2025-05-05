@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { RPC_URL, WHIPLASH_PROGRAM_ID } from "@/constants/constants";
 import IDL from "@/idl/whiplash.json";
 import { Metaplex } from "@metaplex-foundation/js";
+import { Wallet } from '@coral-xyz/anchor';
+import { connection } from '@/utils/connection';
 
 export const dynamic = "force-dynamic";
 
@@ -103,14 +105,46 @@ export async function fetchAllPools(): Promise<Pool[]> {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const pools = await fetchAllPools();
-    return NextResponse.json({ pools });
+    const { searchParams } = new URL(request.url);
+    const tokenMint = searchParams.get('tokenMint');
+
+    if (!tokenMint) {
+      // If no tokenMint is provided, return all pools
+      const pools = await fetchAllPools();
+      return NextResponse.json({ pools });
+    }
+
+    // Validate the token mint address
+    try {
+      new PublicKey(tokenMint);
+    } catch (error) {
+      return NextResponse.json({ error: 'Invalid token mint address' }, { status: 400 });
+    }
+
+    // Create Anchor provider and program
+    const provider = new AnchorProvider(connection, {} as Wallet, {});
+    const program = new Program(IDL as Idl, new PublicKey(WHIPLASH_PROGRAM_ID), provider);
+
+    // Find pool PDA
+    const [pool] = PublicKey.findProgramAddressSync(
+      [Buffer.from('pool'), new PublicKey(tokenMint).toBuffer()],
+      program.programId
+    );
+
+    // Verify pool exists
+    try {
+      await program.account.pool.fetch(pool);
+    } catch (error) {
+      return NextResponse.json({ error: 'Pool not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ pool: pool.toBase58() });
   } catch (error) {
-    console.error("Error in GET /api/pools:", error);
+    console.error('Error fetching pool:', error);
     return NextResponse.json(
-      { error: "Failed to fetch pools" },
+      { error: error instanceof Error ? error.message : 'Failed to fetch pool' },
       { status: 500 }
     );
   }

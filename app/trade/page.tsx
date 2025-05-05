@@ -7,6 +7,15 @@ import { MAX_LEVERAGE } from '@/constants/constants';
 import { Avatar } from '../../components/avatars/Avatar';
 import dynamic from 'next/dynamic';
 import SearchBar from '@/components/SearchBar';
+import { getTokenBalances } from '@/utils/balance';
+import { WalletIcon } from '@heroicons/react/24/outline';
+import TokenDropdown from '@/components/TokenDropdown';
+import { createSwapTransaction, createLeverageSwapTransaction } from '@/txns/swap';
+import { usePriorityFeeTransaction } from '@/hooks/usePriorityFeeTransaction';
+import { showTransactionToast } from '@/utils/transactionToast';
+import { useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
+import { toast } from 'sonner';
 
 // Create a client-side only wallet button component
 const WalletButton = dynamic(
@@ -28,107 +37,132 @@ const mockChartData = [
 ];
 
 const tokenList = [
-  { symbol: 'USDC', icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=026', decimals: 2, usd: 1 },
   { symbol: 'SOL', icon: 'https://cryptologos.cc/logos/solana-sol-logo.png?v=026', decimals: 4, usd: 145 },
-];
-
-// Trending tokens mock
-const trendingTokens = [
-  { symbol: 'USDC', icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=026' },
-  { symbol: 'SOL', icon: 'https://cryptologos.cc/logos/solana-sol-logo.png?v=026' },
-  { symbol: 'ETH', icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=026' },
-  { symbol: 'BTC', icon: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=026' },
-  { symbol: 'BONK', icon: 'https://cryptologos.cc/logos/bonk-bonk-logo.png?v=026' },
 ];
 
 function getToken(symbol: string) {
   return tokenList.find((t) => t.symbol === symbol) || tokenList[0];
 }
 
-function TokenDropdown({ selected, onSelect }: { selected: string, onSelect: (symbol: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+function BalanceChip({ symbol }: { symbol: string }) {
+  const { publicKey } = useWallet();
+  const [balance, setBalance] = useState<number>(0);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpen(false);
+    async function fetchBalance() {
+      if (!publicKey) return;
+      const balances = await getTokenBalances(publicKey.toString());
+      if (symbol === 'SOL') {
+        setBalance(balances.SOL);
+      } else {
+        const tokenBalance = balances.tokens.find(t => t.mint === symbol);
+        setBalance(tokenBalance?.amount || 0);
       }
     }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    fetchBalance();
+  }, [publicKey, symbol]);
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        className="flex items-center gap-2 px-2 py-1 rounded-2xl bg-[#1a1b20] hover:bg-[#23242a] cursor-pointer"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <Avatar publicKey={selected} size={28} />
-        <span className="font-mono text-lg text-white">{selected}</span>
-        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="ml-1 text-white"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-      </button>
-      {open && (
-        <div className="absolute z-50 mt-2 w-64 bg-[#181A20] border border-[#23242a] rounded-2xl shadow-xl">
-          <div className="p-2">
-            <div className="relative">
-              <SearchBar
-                onSelect={(result) => {
-                  if (result.type === 'token' && result.symbol) {
-                    onSelect(result.symbol);
-                    setOpen(false);
-                  }
-                }}
-                className="mb-2"
-                disableClickOutside
-                placeholder="Search token"
-              />
-            </div>
-            <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
-              {trendingTokens.map(token => (
-                <button
-                  key={token.symbol}
-                  type="button"
-                  onClick={() => { onSelect(token.symbol); setOpen(false); }}
-                  className="flex items-center gap-2 px-2 py-2 rounded hover:bg-[#23242a] cursor-pointer"
-                >
-                  <Avatar publicKey={token.symbol} size={24} />
-                  <span className="text-white font-mono">{token.symbol}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+    <div className="text-xs px-2 py-1 rounded bg-[#1a1b20] text-[#b5b5b5] flex items-center gap-1">
+      <WalletIcon className="w-3 h-3" />
+      {balance.toFixed(2)}
     </div>
   );
 }
 
 export default function TradePage() {
-  const { connected } = useWallet();
-  const [inputToken, setInputToken] = useState('USDC');
-  const [outputToken, setOutputToken] = useState('SOL');
+  const wallet = useWallet();
+  const [inputToken, setInputToken] = useState('So11111111111111111111111111111111111111112'); // SOL mint address
+  const [outputToken, setOutputToken] = useState('');
   const [inputAmount, setInputAmount] = useState('');
   const [outputAmount, setOutputAmount] = useState('');
   const [slippage, setSlippage] = useState(0.5);
   const [leverage, setLeverage] = useState(1.0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [poolAddress, setPoolAddress] = useState<string | null>(null);
+  const { connection } = useConnection();
+  const { sendTransactionWithPriorityFee } = usePriorityFeeTransaction();
 
-  const inputTokenObj = getToken(inputToken);
-  const outputTokenObj = getToken(outputToken);
+  // Helper function to get token symbol from mint
+  const getTokenSymbol = (mint: string) => {
+    if (mint === 'So11111111111111111111111111111111111111112') return 'SOL';
+    // Add more token mappings as needed
+    return mint.slice(0, 4) + '...';
+  };
 
-  const handleSwap = (e: React.FormEvent) => {
+  const inputTokenSymbol = getTokenSymbol(inputToken);
+  const outputTokenSymbol = outputToken ? getTokenSymbol(outputToken) : '';
+
+  // Fetch pool address when output token changes
+  useEffect(() => {
+    async function fetchPoolAddress() {
+      if (!outputToken) {
+        setPoolAddress(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/pools?tokenMint=${outputToken}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch pool address');
+        }
+        const data = await response.json();
+        setPoolAddress(data.pool);
+      } catch (error) {
+        console.error('Error fetching pool address:', error);
+        setPoolAddress(null);
+      }
+    }
+
+    fetchPoolAddress();
+  }, [outputToken]);
+
+  const handleSwap = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({
-      inputToken,
-      outputToken,
-      inputAmount,
-      outputAmount,
-      slippage,
-      leverage,
-    });
+    if (!wallet.connected || !wallet.publicKey || !inputAmount || !outputAmount || !poolAddress) return;
+
+    setIsLoading(true);
+    try {
+      // Calculate minimum output amount based on slippage
+      const minAmountOut = Number(outputAmount) * (1 - slippage / 100);
+
+      let signature;
+      if (leverage === 1.0) {
+        // Regular swap
+        const transaction = await createSwapTransaction({
+          pool: new PublicKey(poolAddress),
+          amountIn: Number(inputAmount),
+          minAmountOut,
+          wallet
+        });
+        signature = await sendTransactionWithPriorityFee(transaction);
+      } else {
+        // Leveraged swap
+        const { transaction, positionKeypair } = await createLeverageSwapTransaction({
+          pool: new PublicKey(poolAddress),
+          amountIn: Number(inputAmount),
+          minAmountOut,
+          leverage: Math.floor(leverage),
+          wallet
+        });
+        signature = await sendTransactionWithPriorityFee(transaction, positionKeypair);
+      }
+
+      const success = await showTransactionToast(signature, connection);
+      if (success) {
+        // Reset form
+        setInputAmount('');
+        setOutputAmount('');
+        toast.success('Swap successful!');
+      }
+    } catch (error) {
+      console.error('Swap error:', error);
+      toast.error('Swap failed', {
+        description: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSwitchTokens = () => {
@@ -143,7 +177,7 @@ export default function TradePage() {
     if (!input || isNaN(Number(input))) return '';
     // Mock exchange rate
     const rate = outputToken === 'SOL' ? 0.0082 : 122;
-    return (Number(input) * rate).toFixed(outputTokenObj.decimals);
+    return (Number(input) * rate).toFixed(outputTokenSymbol === 'SOL' ? 4 : 2);
   };
 
   const handleInputChange = (value: string) => {
@@ -165,13 +199,14 @@ export default function TradePage() {
       <div className="flex flex-1 items-start justify-center pt-8" style={{ marginTop: '16px' }}>
         <div className="w-full max-w-lg p-0 shadow-none border-none bg-transparent">
           <h1 className="text-2xl font-bold font-mono mb-8 text-white">Swap</h1>
-          {connected ? (
+          {wallet.connected ? (
             <form onSubmit={handleSwap} className="space-y-0">
               {/* Input */}
               <div className="relative bg-[#23242a] rounded-2xl px-5 py-2 pb-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <span className="text-white font-mono text-sm">Selling</span>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
+                    <BalanceChip symbol={inputTokenSymbol} />
                     <button type="button" onClick={handleHalf} className="text-xs px-2 py-1 rounded bg-[#1a1b20] text-[#b5b5b5] hover:bg-[#23242a]">HALF</button>
                     <button type="button" onClick={handleMax} className="text-xs px-2 py-1 rounded bg-[#1a1b20] text-[#b5b5b5] hover:bg-[#23242a]">MAX</button>
                   </div>
@@ -187,7 +222,7 @@ export default function TradePage() {
                       placeholder="0.00"
                     />
                     <div className="text-xs text-[#b5b5b5] font-mono">
-                      ${inputAmount && !isNaN(Number(inputAmount)) ? (Number(inputAmount) * inputTokenObj.usd).toFixed(2) : '0.00'}
+                      ${inputAmount && !isNaN(Number(inputAmount)) ? (Number(inputAmount) * (inputTokenSymbol === 'SOL' ? 145 : 1)).toFixed(2) : '0.00'}
                     </div>
                   </div>
                 </div>
@@ -215,7 +250,7 @@ export default function TradePage() {
                   <span className="text-white font-mono text-sm">Buying</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <TokenDropdown selected={outputToken} onSelect={setOutputToken} />
+                  <TokenDropdown selected={outputToken || 'Search token'} onSelect={setOutputToken} />
                   <div className="flex flex-col items-end">
                     <input
                       type="text"
@@ -225,7 +260,7 @@ export default function TradePage() {
                       placeholder="0.00"
                     />
                     <div className="text-xs text-[#b5b5b5] font-mono">
-                      ${outputAmount && !isNaN(Number(outputAmount)) ? (Number(outputAmount) * outputTokenObj.usd).toFixed(2) : '0.00'}
+                      ${outputAmount && !isNaN(Number(outputAmount)) ? (Number(outputAmount) * (outputTokenSymbol === 'SOL' ? 145 : 1)).toFixed(2) : '0.00'}
                     </div>
                   </div>
                 </div>
@@ -260,7 +295,7 @@ export default function TradePage() {
 
               {/* Info Row */}
               <div className="flex justify-between items-center text-xs font-mono text-[#b5b5b5] px-2">
-                <span>Rate: <span className="text-white">1 {inputToken} = {inputToken === 'USDC' ? '0.0082' : '122'} {outputToken}</span></span>
+                <span>Rate: <span className="text-white">1 {inputTokenSymbol} = {inputTokenSymbol === 'SOL' ? '0.0082' : '122'} {outputTokenSymbol}</span></span>
                 <span>Impact: <span className="text-[#00ffb3]">0.1%</span></span>
                 <span>Fee: <span className="text-white">~$0.01</span></span>
               </div>
@@ -271,10 +306,10 @@ export default function TradePage() {
               {/* Swap Button */}
               <button
                 type="submit"
+                disabled={!inputAmount || !outputAmount || isLoading || !poolAddress}
                 className="w-full p-4 mt-2 bg-[#00ffb3] text-black rounded-2xl font-bold font-mono text-lg hover:bg-[#00d49c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                disabled={!inputAmount || !outputAmount}
               >
-                Swap
+                {isLoading ? 'Swapping...' : !poolAddress ? 'Pool not found' : 'Swap'}
               </button>
             </form>
           ) : (
