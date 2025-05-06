@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { getRandomPastelColor } from "@/lib/utils";
+import { useRouter } from 'next/navigation';
 
 interface Token {
   address: string;
@@ -23,6 +24,7 @@ export default function TokensTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [solPrice, setSolPrice] = useState<number | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchSolPrice() {
@@ -94,6 +96,7 @@ export default function TokensTable() {
             backgroundColor: getRandomPastelColor(),
             boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.1)',
           }}
+          onClick={() => router.push(`/trade/${token.tokenYMint}`)}
         >
           <div className="flex items-center gap-2 mb-4">
             {token.metadata?.image ? (

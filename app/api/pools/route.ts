@@ -116,6 +116,18 @@ export async function GET(request: Request) {
       return NextResponse.json({ pools });
     }
 
+    // Handle SOL token specially
+    if (tokenMint === 'So11111111111111111111111111111111111111112') {
+      return NextResponse.json({ 
+        pool: null,
+        metadata: {
+          name: 'Solana',
+          symbol: 'SOL',
+          image: 'https://cryptologos.cc/logos/solana-sol-logo.png?v=026'
+        }
+      });
+    }
+
     // Validate the token mint address
     try {
       new PublicKey(tokenMint);
@@ -140,7 +152,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Pool not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ pool: pool.toBase58() });
+    // Fetch token metadata
+    const metadata = await getTokenMetadata(connection, tokenMint);
+
+    return NextResponse.json({ 
+      pool: pool.toBase58(),
+      metadata 
+    });
   } catch (error) {
     console.error('Error fetching pool:', error);
     return NextResponse.json(

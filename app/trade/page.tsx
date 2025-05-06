@@ -16,6 +16,7 @@ import { showTransactionToast } from '@/utils/transactionToast';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 // Create a client-side only wallet button component
 const WalletButton = dynamic(
@@ -44,7 +45,7 @@ function getToken(symbol: string) {
   return tokenList.find((t) => t.symbol === symbol) || tokenList[0];
 }
 
-function BalanceChip({ symbol }: { symbol: string }) {
+function BalanceChip({ token }: { token: TokenState }) {
   const { publicKey } = useWallet();
   const [balance, setBalance] = useState<number>(0);
 
@@ -52,15 +53,15 @@ function BalanceChip({ symbol }: { symbol: string }) {
     async function fetchBalance() {
       if (!publicKey) return;
       const balances = await getTokenBalances(publicKey.toString());
-      if (symbol === 'SOL') {
+      if (token.mint === 'So11111111111111111111111111111111111111112') {
         setBalance(balances.SOL);
       } else {
-        const tokenBalance = balances.tokens.find(t => t.mint === symbol);
+        const tokenBalance = balances.tokens.find(t => t.mint === token.mint);
         setBalance(tokenBalance?.amount || 0);
       }
     }
     fetchBalance();
-  }, [publicKey, symbol]);
+  }, [publicKey, token.mint]);
 
   return (
     <div className="text-xs px-2 py-1 rounded bg-[#1a1b20] text-[#b5b5b5] flex items-center gap-1">
@@ -70,10 +71,24 @@ function BalanceChip({ symbol }: { symbol: string }) {
   );
 }
 
-export default function TradePage() {
+interface TokenState {
+  mint: string;
+  metadata: {
+    symbol?: string;
+    name?: string;
+  };
+}
+
+export default function TradePage({ initialOutputToken }: { initialOutputToken?: string }) {
   const wallet = useWallet();
-  const [inputToken, setInputToken] = useState('So11111111111111111111111111111111111111112'); // SOL mint address
-  const [outputToken, setOutputToken] = useState('');
+  const [inputToken, setInputToken] = useState<TokenState>({
+    mint: 'So11111111111111111111111111111111111111112',
+    metadata: { symbol: 'SOL', name: 'Solana' }
+  });
+  const [outputToken, setOutputToken] = useState<TokenState>({
+    mint: initialOutputToken || '',
+    metadata: {}
+  });
   const [inputAmount, setInputAmount] = useState('');
   const [outputAmount, setOutputAmount] = useState('');
   const [slippage, setSlippage] = useState(0.5);
@@ -82,27 +97,83 @@ export default function TradePage() {
   const [poolAddress, setPoolAddress] = useState<string | null>(null);
   const { connection } = useConnection();
   const { sendTransactionWithPriorityFee } = usePriorityFeeTransaction();
+  const router = useRouter();
 
-  // Helper function to get token symbol from mint
-  const getTokenSymbol = (mint: string) => {
-    if (mint === 'So11111111111111111111111111111111111111112') return 'SOL';
-    // Add more token mappings as needed
-    return mint.slice(0, 4) + '...';
+  // Update output token when initialOutputToken changes
+  useEffect(() => {
+    if (initialOutputToken) {
+      fetchTokenMetadata(initialOutputToken, false);
+    }
+  }, [initialOutputToken]);
+
+  // Fetch token metadata when needed
+  async function fetchTokenMetadata(mint: string, isInput: boolean) {
+    if (!mint || mint === 'So11111111111111111111111111111111111111112') {
+      if (isInput) {
+        setInputToken({
+          mint: 'So11111111111111111111111111111111111111112',
+          metadata: { symbol: 'SOL', name: 'Solana' }
+        });
+      } else {
+        setOutputToken({
+          mint: 'So11111111111111111111111111111111111111112',
+          metadata: { symbol: 'SOL', name: 'Solana' }
+        });
+      }
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/pools?tokenMint=${mint}`);
+      if (!response.ok) throw new Error('Failed to fetch token metadata');
+      const data = await response.json();
+      if (isInput) {
+        setInputToken({ mint, metadata: data.metadata || {} });
+      } else {
+        setOutputToken({ mint, metadata: data.metadata || {} });
+      }
+    } catch (error) {
+      console.error('Error fetching token metadata:', error);
+      if (isInput) {
+        setInputToken({ mint, metadata: {} });
+      } else {
+        setOutputToken({ mint, metadata: {} });
+      }
+    }
+  }
+
+  const handleSwitchTokens = () => {
+    const temp = inputToken;
+    setInputToken(outputToken);
+    setOutputToken(temp);
+    setInputAmount(outputAmount);
+    setOutputAmount(inputAmount);
+  };
+
+  // Helper function to get token symbol
+  const getTokenSymbol = (token: TokenState) => {
+    if (token.mint === 'So11111111111111111111111111111111111111112') return 'SOL';
+    return token.metadata.symbol || token.mint.slice(0, 4) + '...';
   };
 
   const inputTokenSymbol = getTokenSymbol(inputToken);
-  const outputTokenSymbol = outputToken ? getTokenSymbol(outputToken) : '';
+  const outputTokenSymbol = outputToken.mint ? getTokenSymbol(outputToken) : '';
 
   // Fetch pool address when output token changes
   useEffect(() => {
     async function fetchPoolAddress() {
-      if (!outputToken) {
+      if (!outputToken.mint) {
         setPoolAddress(null);
         return;
       }
 
+      // If output token is SOL, we need to use the input token to find the pool
+      const tokenMint = outputToken.mint === 'So11111111111111111111111111111111111111112' 
+        ? inputToken.mint 
+        : outputToken.mint;
+
       try {
-        const response = await fetch(`/api/pools?tokenMint=${outputToken}`);
+        const response = await fetch(`/api/pools?tokenMint=${tokenMint}`);
         if (!response.ok) {
           throw new Error('Failed to fetch pool address');
         }
@@ -115,7 +186,7 @@ export default function TradePage() {
     }
 
     fetchPoolAddress();
-  }, [outputToken]);
+  }, [outputToken.mint, inputToken.mint]);
 
   const handleSwap = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,7 +198,7 @@ export default function TradePage() {
       const minAmountOut = Number(outputAmount) * (1 - slippage / 100);
 
       // Determine if we're swapping from SOL to token Y
-      const isSolToTokenY = inputToken === 'So11111111111111111111111111111111111111112';
+      const isSolToTokenY = inputToken.mint === 'So11111111111111111111111111111111111111112';
 
       let signature;
       if (leverage === 1.0) {
@@ -170,21 +241,6 @@ export default function TradePage() {
     }
   };
 
-  const handleSwitchTokens = () => {
-    setInputToken(outputToken);
-    setOutputToken(inputToken);
-    setInputAmount(outputAmount);
-    setOutputAmount(inputAmount);
-  };
-
-  // Simulate output calculation
-  const calculateOutput = (input: string) => {
-    if (!input || isNaN(Number(input))) return '';
-    // Mock exchange rate
-    const rate = outputToken === 'SOL' ? 0.0082 : 122;
-    return (Number(input) * rate).toFixed(outputTokenSymbol === 'SOL' ? 4 : 2);
-  };
-
   const handleInputChange = (value: string) => {
     setInputAmount(value);
     setOutputAmount(calculateOutput(value));
@@ -199,6 +255,14 @@ export default function TradePage() {
     handleInputChange('50');
   };
 
+  // Simulate output calculation
+  const calculateOutput = (input: string) => {
+    if (!input || isNaN(Number(input))) return '';
+    // Mock exchange rate
+    const rate = outputToken.mint === 'SOL' ? 0.0082 : 122;
+    return (Number(input) * rate).toFixed(outputTokenSymbol === 'SOL' ? 4 : 2);
+  };
+
   return (
     <div className="flex flex-col min-h-[calc(100vh-72px)] bg-black">
       <div className="flex flex-1 items-start justify-center pt-8" style={{ marginTop: '16px' }}>
@@ -211,13 +275,17 @@ export default function TradePage() {
                 <div className="flex items-center justify-between">
                   <span className="text-white font-mono text-sm">Selling</span>
                   <div className="flex gap-2 items-center">
-                    <BalanceChip symbol={inputTokenSymbol} />
+                    <BalanceChip token={inputToken} />
                     <button type="button" onClick={handleHalf} className="text-xs px-2 py-1 rounded bg-[#1a1b20] text-[#b5b5b5] hover:bg-[#23242a]">HALF</button>
                     <button type="button" onClick={handleMax} className="text-xs px-2 py-1 rounded bg-[#1a1b20] text-[#b5b5b5] hover:bg-[#23242a]">MAX</button>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <TokenDropdown selected={inputToken} onSelect={setInputToken} />
+                  <TokenDropdown 
+                    selected={inputToken.mint} 
+                    onSelect={(mint) => fetchTokenMetadata(mint, true)} 
+                    metadata={inputToken.metadata} 
+                  />
                   <div className="flex flex-col items-end">
                     <input
                       type="text"
@@ -233,7 +301,7 @@ export default function TradePage() {
                 </div>
               </div>
 
-              {/* Switch button, layered between input and output */}
+              {/* Switch button */}
               <div className="flex justify-center relative z-30" style={{ marginTop: '-18px', marginBottom: '-18px' }}>
                 <button
                   type="button"
@@ -255,7 +323,11 @@ export default function TradePage() {
                   <span className="text-white font-mono text-sm">Buying</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <TokenDropdown selected={outputToken || 'Search token'} onSelect={setOutputToken} />
+                  <TokenDropdown 
+                    selected={outputToken.mint || 'Search token'} 
+                    onSelect={(mint) => fetchTokenMetadata(mint, false)} 
+                    metadata={outputToken.metadata} 
+                  />
                   <div className="flex flex-col items-end">
                     <input
                       type="text"

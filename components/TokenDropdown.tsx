@@ -4,15 +4,35 @@ import { useState, useRef, useEffect } from 'react';
 import { Avatar } from './avatars/Avatar';
 import SearchBar from './SearchBar';
 
+interface TokenMetadata {
+  symbol?: string;
+  name?: string;
+}
+
 interface TokenDropdownProps {
   selected: string;
   onSelect: (mint: string) => void;
+  metadata?: TokenMetadata;
 }
 
-export default function TokenDropdown({ selected, onSelect }: TokenDropdownProps) {
+export default function TokenDropdown({ selected, onSelect, metadata }: TokenDropdownProps) {
   const [open, setOpen] = useState(false);
-  const [selectedSymbol, setSelectedSymbol] = useState('SOL');
+  const [selectedSymbol, setSelectedSymbol] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchBarRef = useRef<HTMLInputElement>(null);
+
+  // Update selectedSymbol when selected or metadata changes
+  useEffect(() => {
+    if (selected === 'So11111111111111111111111111111111111111112') {
+      setSelectedSymbol('SOL');
+    } else if (selected && metadata?.symbol) {
+      setSelectedSymbol(metadata.symbol);
+    } else if (selected) {
+      setSelectedSymbol(selected.slice(0, 4) + '...');
+    } else {
+      setSelectedSymbol('Search token');
+    }
+  }, [selected, metadata]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -25,6 +45,15 @@ export default function TokenDropdown({ selected, onSelect }: TokenDropdownProps
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (open && searchBarRef.current) {
+      // Small delay to ensure the search bar is rendered
+      setTimeout(() => {
+        searchBarRef.current?.focus();
+      }, 0);
+    }
+  }, [open]);
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
@@ -32,7 +61,7 @@ export default function TokenDropdown({ selected, onSelect }: TokenDropdownProps
         className="flex items-center gap-2 px-2 py-1 rounded-2xl bg-[#1a1b20] hover:bg-[#23242a] cursor-pointer"
         onClick={() => setOpen((v) => !v)}
       >
-        <Avatar publicKey={selected} size={28} />
+        <Avatar publicKey={selected || 'search'} size={28} />
         <span className="font-mono text-lg text-white">{selectedSymbol}</span>
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="ml-1 text-white"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
       </button>
@@ -41,10 +70,11 @@ export default function TokenDropdown({ selected, onSelect }: TokenDropdownProps
           <div className="p-2">
             <div className="relative">
               <SearchBar
+                ref={searchBarRef}
                 onSelect={(result) => {
                   if (result.type === 'token' && result.address) {
                     onSelect(result.address);
-                    setSelectedSymbol(result.symbol || '');
+                    setSelectedSymbol(result.symbol || result.address.slice(0, 4) + '...');
                     setOpen(false);
                   }
                 }}

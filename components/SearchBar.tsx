@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, forwardRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar } from './avatars/Avatar';
 
@@ -16,7 +16,7 @@ interface SearchBarProps {
   disableClickOutside?: boolean;
 }
 
-export default function SearchBar({ className = '', placeholder = 'Search token or address', onSelect, disableClickOutside = false }: SearchBarProps) {
+const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(({ className = '', placeholder = 'Search token or address', onSelect, disableClickOutside = false }, ref) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -79,6 +79,7 @@ export default function SearchBar({ className = '', placeholder = 'Search token 
   return (
     <div className={`relative ${className}`} ref={searchRef}>
       <input
+        ref={ref}
         type="text"
         value={query}
         onChange={(e) => {
@@ -137,7 +138,11 @@ export default function SearchBar({ className = '', placeholder = 'Search token 
       )}
     </div>
   );
-}
+});
+
+SearchBar.displayName = 'SearchBar';
+
+export default SearchBar;
 
 function truncateAddress(address: string): string {
   return `${address.slice(0, 4)}...${address.slice(-4)}`;
