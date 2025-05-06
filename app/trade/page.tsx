@@ -126,6 +126,9 @@ export default function TradePage() {
       // Calculate minimum output amount based on slippage
       const minAmountOut = Number(outputAmount) * (1 - slippage / 100);
 
+      // Determine if we're swapping from SOL to token Y
+      const isSolToTokenY = inputToken === 'So11111111111111111111111111111111111111112';
+
       let signature;
       if (leverage === 1.0) {
         // Regular swap
@@ -133,7 +136,8 @@ export default function TradePage() {
           pool: new PublicKey(poolAddress),
           amountIn: Number(inputAmount),
           minAmountOut,
-          wallet
+          wallet,
+          isSolToTokenY
         });
         signature = await sendTransactionWithPriorityFee(transaction);
       } else {
@@ -143,7 +147,8 @@ export default function TradePage() {
           amountIn: Number(inputAmount),
           minAmountOut,
           leverage: Math.floor(leverage),
-          wallet
+          wallet,
+          isSolToTokenY
         });
         signature = await sendTransactionWithPriorityFee(transaction, positionKeypair);
       }

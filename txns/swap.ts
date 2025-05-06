@@ -11,6 +11,8 @@ import {
   TOKEN_PROGRAM_ID, 
   ASSOCIATED_TOKEN_PROGRAM_ID,
   getAssociatedTokenAddress,
+  createAssociatedTokenAccountInstruction,
+  getAccount
 } from '@solana/spl-token';
 import { getOptimalComputeUnits } from '@/utils/estimateComputeUnits';
 import { connection } from '@/utils/connection';
@@ -36,6 +38,7 @@ interface SwapParams {
   amountIn: number;
   minAmountOut: number;
   wallet: WalletContextState;
+  isSolToTokenY: boolean; // true if swapping from SOL to token Y, false if swapping from token Y to SOL
 }
 
 interface LeverageSwapParams extends SwapParams {
@@ -46,7 +49,8 @@ export async function createSwapTransaction({
   pool,
   amountIn,
   minAmountOut,
-  wallet
+  wallet,
+  isSolToTokenY
 }: SwapParams): Promise<Transaction> {
   if (!wallet.publicKey) {
     throw new Error('Wallet not connected');
@@ -67,19 +71,45 @@ export async function createSwapTransaction({
   const tokenYMint = poolData.tokenYMint;
   const tokenYVault = poolData.tokenYVault;
 
-  // Get user's token accounts
-  const userTokenIn = await getAssociatedTokenAddress(
-    tokenYMint,
-    wallet.publicKey
-  );
+  // Set up token accounts based on swap direction
+  let userTokenIn: PublicKey;
+  let userTokenOut: PublicKey;
 
-  const userTokenOut = await getAssociatedTokenAddress(
-    new PublicKey('So11111111111111111111111111111111111111112'), // SOL mint
-    wallet.publicKey
-  );
+  if (isSolToTokenY) {
+    // Swapping from SOL to token Y
+    userTokenIn = wallet.publicKey; // SOL account is the wallet itself
+    userTokenOut = await getAssociatedTokenAddress(
+      tokenYMint,
+      wallet.publicKey
+    );
+  } else {
+    // Swapping from token Y to SOL
+    userTokenIn = await getAssociatedTokenAddress(
+      tokenYMint,
+      wallet.publicKey
+    );
+    userTokenOut = wallet.publicKey; // SOL account is the wallet itself
+  }
 
   // Create the transaction
   const transaction = new Transaction();
+
+  // Check if token Y account exists and create it if it doesn't
+  // Only need to check if we're receiving token Y (either as input or output)
+  const tokenYAccount = isSolToTokenY ? userTokenOut : userTokenIn;
+  try {
+    await getAccount(connection, tokenYAccount);
+  } catch (error) {
+    // Account doesn't exist, create it
+    transaction.add(
+      createAssociatedTokenAccountInstruction(
+        wallet.publicKey,
+        tokenYAccount,
+        wallet.publicKey,
+        tokenYMint
+      )
+    );
+  }
 
   // Add swap instruction using Anchor
   const swapIx = await program.methods
