@@ -142,7 +142,7 @@ export default function TradePage() {
         signature = await sendTransactionWithPriorityFee(transaction);
       } else {
         // Leveraged swap
-        const { transaction, positionKeypair } = await createLeverageSwapTransaction({
+        const transaction = await createLeverageSwapTransaction({
           pool: new PublicKey(poolAddress),
           amountIn: Number(inputAmount),
           minAmountOut,
@@ -150,7 +150,7 @@ export default function TradePage() {
           wallet,
           isSolToTokenY
         });
-        signature = await sendTransactionWithPriorityFee(transaction, positionKeypair);
+        signature = await sendTransactionWithPriorityFee(transaction);
       }
 
       const success = await showTransactionToast(signature, connection);

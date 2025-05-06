@@ -164,14 +164,12 @@ export async function createLeverageSwapTransaction({
   amountIn,
   minAmountOut,
   leverage,
-  wallet
-}: LeverageSwapParams): Promise<{ transaction: Transaction; positionKeypair: Keypair }> {
+  wallet,
+  isSolToTokenY
+}: LeverageSwapParams): Promise<Transaction> {
   if (!wallet.publicKey) {
     throw new Error('Wallet not connected');
   }
-
-  // Create position keypair
-  const positionKeypair = Keypair.generate();
 
   // Create Anchor provider and program
   const anchorWallet = {
@@ -188,25 +186,62 @@ export async function createLeverageSwapTransaction({
   const tokenYMint = poolData.tokenYMint;
   const tokenYVault = poolData.tokenYVault;
 
-  // Get user's token accounts
-  const userTokenIn = await getAssociatedTokenAddress(
-    tokenYMint,
-    wallet.publicKey
+  // Set up token accounts based on swap direction
+  let userTokenIn: PublicKey;
+  let userTokenOut: PublicKey;
+
+  if (isSolToTokenY) {
+    // Swapping from SOL to token Y
+    userTokenIn = wallet.publicKey; // SOL account is the wallet itself
+    userTokenOut = await getAssociatedTokenAddress(
+      tokenYMint,
+      wallet.publicKey
+    );
+  } else {
+    // Swapping from token Y to SOL
+    userTokenIn = await getAssociatedTokenAddress(
+      tokenYMint,
+      wallet.publicKey
+    );
+    userTokenOut = wallet.publicKey; // SOL account is the wallet itself
+  }
+
+  // Derive position PDA - using the same seeds as in the test file
+  const [position] = PublicKey.findProgramAddressSync(
+    [
+      Buffer.from('position'),
+      pool.toBuffer(),
+      wallet.publicKey.toBuffer(),
+    ],
+    new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ')
   );
 
-  const userTokenOut = await getAssociatedTokenAddress(
-    new PublicKey('So11111111111111111111111111111111111111112'), // SOL mint
-    wallet.publicKey
-  );
-
-  // Create position token account
+  // Create position token account - using allowOwnerOffCurve as in the test file
   const positionTokenAccount = await getAssociatedTokenAddress(
     tokenYMint,
-    positionKeypair.publicKey
+    position,
+    true // allowOwnerOffCurve
   );
 
   // Create the transaction
   const transaction = new Transaction();
+
+  // Check if token Y account exists and create it if it doesn't
+  // Only need to check if we're receiving token Y (either as input or output)
+  const tokenYAccount = isSolToTokenY ? userTokenOut : userTokenIn;
+  try {
+    await getAccount(connection, tokenYAccount);
+  } catch (error) {
+    // Account doesn't exist, create it
+    transaction.add(
+      createAssociatedTokenAccountInstruction(
+        wallet.publicKey,
+        tokenYAccount,
+        wallet.publicKey,
+        tokenYMint
+      )
+    );
+  }
 
   // Add leverage swap instruction using Anchor
   const leverageSwapIx = await program.methods
@@ -221,7 +256,7 @@ export async function createLeverageSwapTransaction({
       tokenYVault,
       userTokenIn,
       userTokenOut,
-      position: positionKeypair.publicKey,
+      position,
       positionTokenAccount,
       positionTokenMint: tokenYMint,
       tokenProgram: TOKEN_PROGRAM_ID,
@@ -239,7 +274,7 @@ export async function createLeverageSwapTransaction({
     computeUnits = await getOptimalComputeUnits(
       transaction.instructions,
       wallet.publicKey,
-      [positionKeypair as any] // Type assertion needed for getOptimalComputeUnits
+      []
     ) ?? 500_000;
   } catch (error) {
     console.error('Error getting optimal compute units:', error);
@@ -259,5 +294,5 @@ export async function createLeverageSwapTransaction({
   transaction.feePayer = wallet.publicKey;
   transaction.lastValidBlockHeight = lastValidBlockHeight;
 
-  return { transaction, positionKeypair };
+  return transaction;
 } 
