@@ -114,8 +114,8 @@ export async function createSwapTransaction({
   // Add swap instruction using Anchor
   const swapIx = await program.methods
     .swap(
-      new BN(amountIn * LAMPORTS_PER_SOL),
-      new BN(minAmountOut * LAMPORTS_PER_SOL)
+      new BN(isSolToTokenY ? amountIn * LAMPORTS_PER_SOL : amountIn * Math.pow(10, 6)),
+      new BN(isSolToTokenY ? minAmountOut * Math.pow(10, 6) : minAmountOut * LAMPORTS_PER_SOL)
     )
     .accounts({
       user: wallet.publicKey,

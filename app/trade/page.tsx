@@ -17,6 +17,7 @@ import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { calculateExpectedOutput, calculatePoolPrice, getPoolReserves } from '@/utils/poolCalculations';
 
 // Create a client-side only wallet button component
 const WalletButton = dynamic(
@@ -98,6 +99,14 @@ export default function TradePage({ initialOutputToken }: { initialOutputToken?:
   const { connection } = useConnection();
   const { sendTransactionWithPriorityFee } = usePriorityFeeTransaction();
   const router = useRouter();
+
+  // Add state for pool reserves
+  const [poolReserves, setPoolReserves] = useState<{
+    solReserve: number;
+    virtualSolReserve: number;
+    tokenYReserve: number;
+    virtualTokenYReserve: number;
+  } | null>(null);
 
   // Update output token when initialOutputToken changes
   useEffect(() => {
@@ -188,6 +197,26 @@ export default function TradePage({ initialOutputToken }: { initialOutputToken?:
     fetchPoolAddress();
   }, [outputToken.mint, inputToken.mint]);
 
+  // Fetch pool reserves when pool address changes
+  useEffect(() => {
+    async function fetchPoolReserves() {
+      if (!poolAddress) {
+        setPoolReserves(null);
+        return;
+      }
+
+      try {
+        const reserves = await getPoolReserves(new PublicKey(poolAddress));
+        setPoolReserves(reserves);
+      } catch (error) {
+        console.error('Error fetching pool reserves:', error);
+        setPoolReserves(null);
+      }
+    }
+
+    fetchPoolReserves();
+  }, [poolAddress]);
+
   const handleSwap = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!wallet.connected || !wallet.publicKey || !inputAmount || !outputAmount || !poolAddress) return;
@@ -255,13 +284,19 @@ export default function TradePage({ initialOutputToken }: { initialOutputToken?:
     handleInputChange('50');
   };
 
-  // Simulate output calculation
+  // Calculate output amount using pool reserves
   const calculateOutput = (input: string) => {
-    if (!input || isNaN(Number(input))) return '';
-    // Mock exchange rate
-    const rate = outputToken.mint === 'SOL' ? 0.0082 : 122;
-    return (Number(input) * rate).toFixed(outputTokenSymbol === 'SOL' ? 4 : 2);
+    if (!input || isNaN(Number(input)) || !poolReserves) return '';
+    
+    const isSolToTokenY = inputToken.mint === 'So11111111111111111111111111111111111111112';
+    const outputAmount = calculateExpectedOutput(poolReserves, Number(input), isSolToTokenY);
+    
+    return outputAmount.toFixed(outputTokenSymbol === 'SOL' ? 4 : 2);
   };
+
+  // Calculate current price
+  const currentPrice = poolReserves ? calculatePoolPrice(poolReserves) : 0;
+  const displayPrice = inputTokenSymbol === 'SOL' ? currentPrice : 1 / currentPrice;
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-72px)] bg-black">
@@ -372,7 +407,7 @@ export default function TradePage({ initialOutputToken }: { initialOutputToken?:
 
               {/* Info Row */}
               <div className="flex justify-between items-center text-xs font-mono text-[#b5b5b5] px-2">
-                <span>Rate: <span className="text-white">1 {inputTokenSymbol} = {inputTokenSymbol === 'SOL' ? '0.0082' : '122'} {outputTokenSymbol}</span></span>
+                <span>Rate: <span className="text-white">1 {inputTokenSymbol} = {displayPrice.toFixed(4)} {outputTokenSymbol}</span></span>
                 <span>Impact: <span className="text-[#00ffb3]">0.1%</span></span>
                 <span>Fee: <span className="text-white">~$0.01</span></span>
               </div>

@@ -155,9 +155,23 @@ export async function GET(request: Request) {
     // Fetch token metadata
     const metadata = await getTokenMetadata(connection, tokenMint);
 
+    // Calculate price
+    const poolAccount = await program.account.pool.fetch(pool);
+    const solReserve = Number(poolAccount.lamports);
+    const virtualSolReserve = Number(poolAccount.virtualSolAmount);
+    const tokenYReserve = Number(poolAccount.tokenYAmount);
+    const virtualTokenYReserve = Number(poolAccount.virtualTokenYAmount);
+    
+    const price = (solReserve + virtualSolReserve) / (tokenYReserve + virtualTokenYReserve);
+
     return NextResponse.json({ 
       pool: pool.toBase58(),
-      metadata 
+      metadata,
+      price,
+      solReserve,
+      virtualSolReserve,
+      tokenYReserve,
+      virtualTokenYReserve
     });
   } catch (error) {
     console.error('Error fetching pool:', error);

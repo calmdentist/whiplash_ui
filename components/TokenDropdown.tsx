@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Avatar } from './avatars/Avatar';
 import SearchBar from './SearchBar';
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 interface TokenMetadata {
   symbol?: string;
@@ -62,7 +63,11 @@ export default function TokenDropdown({ selected, onSelect, metadata }: TokenDro
         onClick={() => setOpen((v) => !v)}
       >
         <Avatar publicKey={selected || 'search'} size={28} />
-        <span className="font-mono text-lg text-white">{selectedSymbol}</span>
+        {(!selected || selected === 'Search token') ? (
+          <MagnifyingGlassIcon className="w-5 h-5 text-white" />
+        ) : (
+          <span className="font-mono text-lg text-white">{selectedSymbol}</span>
+        )}
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="ml-1 text-white"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
       </button>
       {open && (

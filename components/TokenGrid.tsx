@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { getRandomPastelColor } from "@/lib/utils";
 import { useRouter } from 'next/navigation';
+import { calculateMarketCap as calculateTokenMarketCap, calculateLiquidity } from "@/utils/poolCalculations";
 
 interface Token {
   address: string;
@@ -57,25 +58,15 @@ export default function TokensTable() {
     fetchTokens();
   }, []);
 
-  const calculateMarketCap = (token: Token) => {
+  const formatMarketCap = (token: Token) => {
     if (!solPrice) return "Loading...";
-
-    // Calculate total value in SOL
-    const totalSolValue = Number(token.lamports) / 1e9 + Number(token.virtualSolAmount) / 1e9;
-    
-    // Convert to USD
-    const marketCap = totalSolValue * solPrice;
-    
-    // Format the number
-    if (marketCap >= 1e9) {
-      return `$${(marketCap / 1e9).toFixed(2)}B`;
-    } else if (marketCap >= 1e6) {
-      return `$${(marketCap / 1e6).toFixed(2)}M`;
-    } else if (marketCap >= 1e3) {
-      return `$${(marketCap / 1e3).toFixed(2)}K`;
-    } else {
-      return `$${marketCap.toFixed(2)}`;
-    }
+    const reserves = {
+      solReserve: Number(token.lamports),
+      virtualSolReserve: Number(token.virtualSolAmount),
+      tokenYReserve: Number(token.tokenYAmount),
+      virtualTokenYReserve: Number(token.virtualTokenYAmount)
+    };
+    return calculateTokenMarketCap(reserves, solPrice);
   };
 
   if (loading) {
@@ -124,12 +115,17 @@ export default function TokensTable() {
           <div className="grid grid-cols-3 gap-2 text-sm">
             <div className="space-y-1">
               <p className="text-black/70 text-xs">Market Cap</p>
-              <p className="font-semibold text-black text-xs">{calculateMarketCap(token)}</p>
+              <p className="font-semibold text-black text-xs">{formatMarketCap(token)}</p>
             </div>
             <div className="space-y-1">
               <p className="text-black/70 text-xs">Liquidity</p>
               <p className="font-semibold text-black text-xs">
-                ${(Number(token.lamports) / 1e9 * (solPrice || 0)).toFixed(2)}
+                {solPrice ? calculateLiquidity({
+                  solReserve: Number(token.lamports),
+                  virtualSolReserve: Number(token.virtualSolAmount),
+                  tokenYReserve: Number(token.tokenYAmount),
+                  virtualTokenYReserve: Number(token.virtualTokenYAmount)
+                }, solPrice) : "Loading..."}
               </p>
             </div>
             <div className="space-y-1">
