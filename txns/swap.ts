@@ -252,9 +252,9 @@ export async function createLeverageSwapTransaction({
   // Add leverage swap instruction using Anchor
   const leverageSwapIx = await program.methods
     .leverageSwap(
-      new BN(amountIn * LAMPORTS_PER_SOL),
-      new BN(minAmountOut * LAMPORTS_PER_SOL),
-      leverage
+      new BN(Math.floor(amountIn * (isSolToTokenY ? LAMPORTS_PER_SOL : Math.pow(10, 6)))), // Use correct decimals for input
+      new BN(Math.floor(minAmountOut * (isSolToTokenY ? Math.pow(10, 6) : LAMPORTS_PER_SOL))), // Use correct decimals for output
+      Math.floor(leverage) // Pass raw leverage value (2.0 becomes 2)
     )
     .accounts({
       user: wallet.publicKey,

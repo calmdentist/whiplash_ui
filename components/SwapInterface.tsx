@@ -194,28 +194,8 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
 
     setIsLoading(true);
     try {
-      // Calculate minimum output amount based on slippage and leverage
-      let minAmountOut;
-      if (leverage === 1.0) {
-        // Regular swap - use simple slippage calculation
-        minAmountOut = Number(outputAmount) * (1 - slippage / 100);
-      } else {
-        // Leverage swap - need to account for leverage in slippage calculation
-        // The actual output will be less due to leverage, so we need to adjust our minimum
-        const leveragedAmount = Number(inputAmount) * leverage;
-        const isSolToTokenY = inputToken.mint === 'So11111111111111111111111111111111111111112';
-        const expectedOutput = calculateExpectedOutput(
-          {
-            solReserve: poolReserves?.solReserve || 0,
-            virtualSolReserve: poolReserves?.virtualSolReserve || 0,
-            tokenYReserve: poolReserves?.tokenYReserve || 0,
-            virtualTokenYReserve: poolReserves?.virtualTokenYReserve || 0
-          },
-          leveragedAmount,
-          isSolToTokenY
-        );
-        minAmountOut = expectedOutput * (1 - slippage / 100);
-      }
+      // Calculate minimum output amount based on slippage
+      const minAmountOut = Number(outputAmount) * (1 - slippage / 100);
 
       // Determine if we're swapping from SOL to token Y
       const isSolToTokenY = inputToken.mint === 'So11111111111111111111111111111111111111112';
@@ -236,8 +216,8 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
         const transaction = await createLeverageSwapTransaction({
           pool: new PublicKey(poolAddress),
           amountIn: Number(inputAmount),
-          minAmountOut,
-          leverage: Math.floor(leverage),
+          minAmountOut: Math.floor(minAmountOut), // Ensure it's a whole number
+          leverage: Math.floor(leverage * 10), // Scale by 10 for contract
           wallet,
           isSolToTokenY
         });
@@ -280,7 +260,16 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
     if (!input || isNaN(Number(input)) || !poolReserves) return '';
     
     const isSolToTokenY = inputToken.mint === 'So11111111111111111111111111111111111111112';
-    const outputAmount = calculateExpectedOutput(poolReserves, Number(input), isSolToTokenY);
+    const inputAmount = Number(input);
+    
+    // For leverage trades, multiply input by leverage
+    const effectiveInput = leverage > 1.0 ? inputAmount * leverage : inputAmount;
+    
+    const outputAmount = calculateExpectedOutput(
+      poolReserves,
+      effectiveInput,
+      isSolToTokenY
+    );
     
     return outputAmount.toFixed(outputTokenSymbol === 'SOL' ? 4 : 2);
   };

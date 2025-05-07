@@ -39,7 +39,8 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
         const transformedPositions = data.positions.map((pos: any) => ({
           ...pos,
           pnl: '0.00', // Dummy PNL value
-          size: (Number(pos.collateral) * pos.leverage).toString()
+          size: (Number(pos.collateral) * pos.leverage).toString(),
+          leverage: pos.leverage // Use raw leverage value
         }));
         
         setPositions(transformedPositions);
@@ -83,7 +84,8 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
       const transformedPositions = data.positions.map((pos: any) => ({
         ...pos,
         pnl: '0.00',
-        size: (Number(pos.collateral) * pos.leverage).toString()
+        size: (Number(pos.collateral) * pos.leverage).toString(),
+        leverage: pos.leverage // Use raw leverage value
       }));
       
       setPositions(transformedPositions);
