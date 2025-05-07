@@ -122,6 +122,10 @@
   html {
     font-family: var(--font-decima-mono);
   }
+
+  button {
+    @apply cursor-pointer;
+  }
 }
 
 /* Gradient animations */

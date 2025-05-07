@@ -11,6 +11,7 @@ import { usePriorityFeeTransaction } from '@/hooks/usePriorityFeeTransaction';
 import { showTransactionToast } from '@/utils/transactionToast';
 import { toast } from 'sonner';
 import { calculateExpectedOutput, calculatePoolPrice, getPoolReserves } from '@/utils/poolCalculations';
+import PositionsPanel from './PositionsPanel';
 
 interface TokenState {
   mint: string;
@@ -66,6 +67,7 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
   const [leverage, setLeverage] = useState(1.0);
   const [isLoading, setIsLoading] = useState(false);
   const [poolAddress, setPoolAddress] = useState<string | null>(null);
+  const [isPositionsPanelOpen, setIsPositionsPanelOpen] = useState(false);
   const { connection } = useConnection();
   const { sendTransactionWithPriorityFee } = usePriorityFeeTransaction();
 
@@ -376,17 +378,35 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
         <span>Fee: <span className="text-white">~$0.01</span></span>
       </div>
 
-      {/* Add vertical space before swap button */}
+      {/* Add vertical space before buttons */}
       <div style={{ marginTop: '18px' }} />
 
       {/* Swap Button */}
       <button
         type="submit"
         disabled={!inputAmount || !outputAmount || isLoading || !poolAddress}
-        className="w-full p-4 mt-2 bg-[#00ffb3] text-black rounded-2xl font-bold font-mono text-lg hover:bg-[#00d49c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        className="w-full p-4 bg-[#00ffb3] text-black rounded-2xl font-bold font-mono text-lg hover:bg-[#00d49c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       >
         {isLoading ? 'Swapping...' : !poolAddress ? 'Pool not found' : 'Swap'}
       </button>
+
+      {/* Manage Positions Button */}
+      {poolAddress && (
+        <button
+          type="button"
+          onClick={() => setIsPositionsPanelOpen(true)}
+          className="w-full p-4 mt-4 bg-[#1a1b20] text-white rounded-2xl font-bold font-mono text-lg hover:bg-[#23242a] transition-colors cursor-pointer"
+        >
+          Manage Positions
+        </button>
+      )}
+
+      {/* Positions Panel */}
+      <PositionsPanel
+        isOpen={isPositionsPanelOpen}
+        onClose={() => setIsPositionsPanelOpen(false)}
+        tokenYMint={inputToken.mint === 'So11111111111111111111111111111111111111112' ? outputToken.mint : inputToken.mint}
+      />
     </form>
   );
 } 
