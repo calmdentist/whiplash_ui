@@ -45,6 +45,12 @@ interface LeverageSwapParams extends SwapParams {
   leverage: number;
 }
 
+interface ClosePositionParams {
+  pool: PublicKey;
+  positionVault: PublicKey;
+  wallet: WalletContextState;
+}
+
 export async function createSwapTransaction({
   pool,
   amountIn,
@@ -267,6 +273,128 @@ export async function createLeverageSwapTransaction({
     .instruction();
 
   transaction.add(leverageSwapIx);
+
+  // Get optimal compute units
+  let computeUnits = 500_000;
+  try {
+    computeUnits = await getOptimalComputeUnits(
+      transaction.instructions,
+      wallet.publicKey,
+      []
+    ) ?? 500_000;
+  } catch (error) {
+    console.error('Error getting optimal compute units:', error);
+  }
+
+  if (computeUnits) {
+    transaction.add(
+      ComputeBudgetProgram.setComputeUnitLimit({
+        units: computeUnits,
+      })
+    );
+  }
+
+  // Add recent blockhash
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = wallet.publicKey;
+  transaction.lastValidBlockHeight = lastValidBlockHeight;
+
+  return transaction;
+}
+
+export async function createClosePositionTransaction({
+  pool,
+  positionVault,
+  wallet,
+}: ClosePositionParams): Promise<Transaction> {
+  if (!wallet.publicKey) {
+    throw new Error('Wallet not connected');
+  }
+
+  // Create Anchor provider and program
+  const anchorWallet = {
+    publicKey: wallet.publicKey,
+    signTransaction: wallet.signTransaction,
+    signAllTransactions: wallet.signAllTransactions,
+  } as Wallet;
+
+  const provider = new AnchorProvider(connection, anchorWallet, {});
+  const program = new Program(IDL as Idl, new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ'), provider);
+
+  // Derive pool PDA first - using the same seeds as in the test file
+  const [poolPda] = PublicKey.findProgramAddressSync(
+    [
+      Buffer.from('pool'),
+      pool.toBuffer(), // pool is the token mint
+    ],
+    new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ')
+  );
+
+  // Get pool data to determine token accounts
+  const poolData = (await program.account.pool.fetch(poolPda)) as unknown as PoolAccount;
+  const tokenYMint = poolData.tokenYMint;
+  const tokenYVault = poolData.tokenYVault;
+
+  // Derive position PDA - using the same seeds as in the test file
+  const [position] = PublicKey.findProgramAddressSync(
+    [
+      Buffer.from('position'),
+      poolPda.toBuffer(),
+      wallet.publicKey.toBuffer(),
+    ],
+    new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ')
+  );
+
+  // Create position token account - using allowOwnerOffCurve as in the test file
+  const positionTokenAccount = await getAssociatedTokenAddress(
+    tokenYMint,
+    position,
+    true // allowOwnerOffCurve
+  );
+
+  // Get user's token account
+  const userTokenOut = await getAssociatedTokenAddress(
+    tokenYMint,
+    wallet.publicKey
+  );
+
+  // Create the transaction
+  const transaction = new Transaction();
+
+  // Check if user's token account exists and create it if it doesn't
+  try {
+    await getAccount(connection, userTokenOut);
+  } catch (error) {
+    // Account doesn't exist, create it
+    transaction.add(
+      createAssociatedTokenAccountInstruction(
+        wallet.publicKey,
+        userTokenOut,
+        wallet.publicKey,
+        tokenYMint
+      )
+    );
+  }
+
+  // Add close position instruction using Anchor
+  const closePositionIx = await program.methods
+    .closePosition()
+    .accounts({
+      user: wallet.publicKey,
+      pool: poolPda,
+      tokenYVault,
+      position,
+      positionTokenAccount,
+      userTokenOut,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+      rent: SYSVAR_RENT_PUBKEY,
+    })
+    .instruction();
+
+  transaction.add(closePositionIx);
 
   // Get optimal compute units
   let computeUnits = 500_000;
