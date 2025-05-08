@@ -12,6 +12,7 @@ interface Position {
   leverage: number;
   pnl: string;
   positionVault: string;
+  nonce: number;
 }
 
 interface PositionsPanelProps {
@@ -40,7 +41,8 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
           ...pos,
           pnl: '0.00', // Dummy PNL value
           size: (Number(pos.collateral) * pos.leverage).toString(),
-          leverage: pos.leverage // Use raw leverage value
+          leverage: pos.leverage, // Use raw leverage value
+          nonce: pos.nonce // Include nonce in transformed data
         }));
         
         setPositions(transformedPositions);
@@ -57,13 +59,14 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
     }
   }, [wallet.publicKey, tokenYMint, isOpen]);
 
-  const handleClosePosition = async (positionVault: string) => {
+  const handleClosePosition = async (positionVault: string, nonce: number) => {
     if (!wallet.publicKey || !tokenYMint || !wallet.signTransaction || !wallet.sendTransaction) return;
     
     try {
       const transaction = await createClosePositionTransaction({
         pool: new PublicKey(tokenYMint), // Use the token mint as the pool address
         positionVault: new PublicKey(positionVault),
+        nonce, // Pass the nonce
         wallet: wallet
       });
 
@@ -85,7 +88,8 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
         ...pos,
         pnl: '0.00',
         size: (Number(pos.collateral) * pos.leverage).toString(),
-        leverage: pos.leverage // Use raw leverage value
+        leverage: pos.leverage, // Use raw leverage value
+        nonce: pos.nonce // Include nonce in transformed data
       }));
       
       setPositions(transformedPositions);
@@ -148,7 +152,7 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
                     <span className="text-white font-mono">{position.pnl}</span>
                   </div>
                   <button
-                    onClick={() => handleClosePosition(position.positionVault)}
+                    onClick={() => handleClosePosition(position.positionVault, position.nonce)}
                     className="w-full py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-mono text-sm transition-colors"
                   >
                     Close Position

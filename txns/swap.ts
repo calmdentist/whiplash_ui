@@ -43,11 +43,13 @@ interface SwapParams {
 
 interface LeverageSwapParams extends SwapParams {
   leverage: number;
+  nonce: number;
 }
 
 interface ClosePositionParams {
   pool: PublicKey;
   positionVault: PublicKey;
+  nonce: number;
   wallet: WalletContextState;
 }
 
@@ -170,6 +172,7 @@ export async function createLeverageSwapTransaction({
   amountIn,
   minAmountOut,
   leverage,
+  nonce,
   wallet,
   isSolToTokenY
 }: LeverageSwapParams): Promise<Transaction> {
@@ -212,12 +215,17 @@ export async function createLeverageSwapTransaction({
     userTokenOut = wallet.publicKey; // SOL account is the wallet itself
   }
 
-  // Derive position PDA - using the same seeds as in the test file
+  // Convert nonce to BN and get its bytes
+  const nonceBN = new BN(nonce);
+  const nonceBytes = nonceBN.toArrayLike(Buffer, "le", 8);
+
+  // Derive position PDA with nonce
   const [position] = PublicKey.findProgramAddressSync(
     [
       Buffer.from('position'),
       pool.toBuffer(),
       wallet.publicKey.toBuffer(),
+      nonceBytes,
     ],
     new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ')
   );
@@ -254,7 +262,8 @@ export async function createLeverageSwapTransaction({
     .leverageSwap(
       new BN(Math.floor(amountIn * (isSolToTokenY ? LAMPORTS_PER_SOL : Math.pow(10, 6)))), // Use correct decimals for input
       new BN(Math.floor(minAmountOut * (isSolToTokenY ? Math.pow(10, 6) : LAMPORTS_PER_SOL))), // Use correct decimals for output
-      Math.floor(leverage) // Pass raw leverage value (2.0 becomes 2)
+      Math.floor(leverage), // Pass raw leverage value (2.0 becomes 2)
+      nonceBN
     )
     .accounts({
       user: wallet.publicKey,
@@ -306,6 +315,7 @@ export async function createLeverageSwapTransaction({
 export async function createClosePositionTransaction({
   pool,
   positionVault,
+  nonce,
   wallet,
 }: ClosePositionParams): Promise<Transaction> {
   if (!wallet.publicKey) {
@@ -336,12 +346,17 @@ export async function createClosePositionTransaction({
   const tokenYMint = poolData.tokenYMint;
   const tokenYVault = poolData.tokenYVault;
 
-  // Derive position PDA - using the same seeds as in the test file
+  // Convert nonce to BN and get its bytes
+  const nonceBN = new BN(nonce);
+  const nonceBytes = nonceBN.toArrayLike(Buffer, "le", 8);
+
+  // Derive position PDA with nonce
   const [position] = PublicKey.findProgramAddressSync(
     [
       Buffer.from('position'),
       poolPda.toBuffer(),
       wallet.publicKey.toBuffer(),
+      nonceBytes,
     ],
     new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ')
   );

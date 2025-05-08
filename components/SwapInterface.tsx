@@ -212,12 +212,16 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
         });
         signature = await sendTransactionWithPriorityFee(transaction);
       } else {
+        // Generate a random nonce for leverage swap
+        const nonce = Math.floor(Math.random() * 1000000); // Use smaller range for nonce like in test file
+        
         // Leveraged swap
         const transaction = await createLeverageSwapTransaction({
           pool: new PublicKey(poolAddress),
           amountIn: Number(inputAmount),
           minAmountOut: Math.floor(minAmountOut), // Ensure it's a whole number
           leverage: Math.floor(leverage * 10), // Scale by 10 for contract
+          nonce, // Pass the generated nonce
           wallet,
           isSolToTokenY
         });

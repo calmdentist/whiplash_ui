@@ -20,6 +20,7 @@ interface PositionAccount {
   leverage: number;
   entryPrice: typeof BN;
   size: typeof BN;
+  nonce: typeof BN;
   bump: number;
 }
 
@@ -81,6 +82,7 @@ export async function GET(request: Request) {
         leverage: positionAccount.leverage,
         entryPrice: positionAccount.entryPrice.toString(),
         size: positionAccount.size.toString(),
+        nonce: positionAccount.nonce.toString(),
       };
     });
 
