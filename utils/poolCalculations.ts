@@ -49,6 +49,18 @@ export function formatNumber(value: number): string {
   }
 }
 
+export function formatTokenAmount(value: number): string {
+    if (value >= 1e9) {
+      return `${(value / 1e9).toFixed(2)}B`;
+    } else if (value >= 1e6) {
+      return `${(value / 1e6).toFixed(2)}M`;
+    } else if (value >= 1e3) {
+      return `${(value / 1e3).toFixed(2)}K`;
+    } else {
+      return `${value.toFixed(2)}`;
+    }
+  }
+
 export function calculateMarketCap(reserves: PoolReserves, solPrice: number): string {
   const marketCap = calculateRawMarketCap(reserves, solPrice);
   return formatNumber(marketCap);
@@ -103,4 +115,29 @@ export async function getPoolReserves(
     tokenYReserve: Number(poolAccount.tokenYAmount),
     virtualTokenYReserve: Number(poolAccount.virtualTokenYAmount)
   };
+}
+
+export function calculatePositionEntryPrice(
+  size: number,
+  collateral: number,
+  leverage: number,
+  isLong: boolean,
+  solPrice: number
+): number {
+  // Calculate the SOL/TOKEN rate at entry
+  let entryRate: number;
+  if (isLong) {
+    // For long positions: (collateral * leverage) / size
+    // collateral is in SOL (9 decimals), size is in TOKEN (6 decimals)
+    // Need to adjust for decimal difference: 9 - 6 = 3 decimals
+    entryRate = (collateral * leverage) / (size * Math.pow(10, 3));
+  } else {
+    // For short positions: size / (collateral * leverage)
+    // size is in SOL (9 decimals), collateral is in TOKEN (6 decimals)
+    // Need to adjust for decimal difference: 9 - 6 = 3 decimals
+    entryRate = (size * Math.pow(10, 3)) / (collateral * leverage);
+  }
+  
+  // Convert to USD by multiplying by SOL price
+  return entryRate * solPrice;
 } 

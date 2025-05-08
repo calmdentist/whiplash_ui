@@ -10,7 +10,7 @@ import { createSwapTransaction, createLeverageSwapTransaction } from '@/txns/swa
 import { usePriorityFeeTransaction } from '@/hooks/usePriorityFeeTransaction';
 import { showTransactionToast } from '@/utils/transactionToast';
 import { toast } from 'sonner';
-import { calculateExpectedOutput, calculatePoolPrice, getPoolReserves } from '@/utils/poolCalculations';
+import { calculateExpectedOutput, calculatePoolPrice, getPoolReserves, formatTokenAmount } from '@/utils/poolCalculations';
 import PositionsPanel from './PositionsPanel';
 
 interface TokenState {
@@ -68,6 +68,7 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
   const [isLoading, setIsLoading] = useState(false);
   const [poolAddress, setPoolAddress] = useState<string | null>(null);
   const [isPositionsPanelOpen, setIsPositionsPanelOpen] = useState(false);
+  const [solPrice, setSolPrice] = useState<number>(0);
   const { connection } = useConnection();
   const { sendTransactionWithPriorityFee } = usePriorityFeeTransaction();
 
@@ -78,6 +79,26 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
     tokenYReserve: number;
     virtualTokenYReserve: number;
   } | null>(null);
+
+  // Fetch SOL price
+  useEffect(() => {
+    async function fetchSolPrice() {
+      try {
+        const response = await fetch('/api/sol-price');
+        if (!response.ok) throw new Error('Failed to fetch SOL price');
+        const data = await response.json();
+        setSolPrice(data.price);
+      } catch (error) {
+        console.error('Error fetching SOL price:', error);
+        toast.error('Failed to fetch SOL price');
+      }
+    }
+
+    fetchSolPrice();
+    // Refresh price every minute
+    const interval = setInterval(fetchSolPrice, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Update output token when initialOutputToken changes
   useEffect(() => {
@@ -247,20 +268,10 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
 
   const handleInputChange = (value: string) => {
     setInputAmount(value);
-    setOutputAmount(calculateOutput(value));
+    calculateAndSetOutput(value);
   };
 
-  const handleMax = () => {
-    // Mock max value
-    handleInputChange('100');
-  };
-  const handleHalf = () => {
-    // Mock half value
-    handleInputChange('50');
-  };
-
-  // Calculate output amount using pool reserves
-  const calculateOutput = (input: string) => {
+  const calculateAndSetOutput = (input: string) => {
     if (!input || isNaN(Number(input)) || !poolReserves) return '';
     
     const isSolToTokenY = inputToken.mint === 'So11111111111111111111111111111111111111112';
@@ -275,12 +286,38 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
       isSolToTokenY
     );
     
-    return outputAmount.toFixed(outputTokenSymbol === 'SOL' ? 4 : 2);
+    setOutputAmount(outputAmount.toFixed(outputTokenSymbol === 'SOL' ? 4 : 2));
+  };
+
+  // Add effect to recalculate output when leverage changes
+  useEffect(() => {
+    if (inputAmount) {
+      calculateAndSetOutput(inputAmount);
+    }
+  }, [leverage, poolReserves, inputToken.mint]);
+
+  const handleMax = () => {
+    // Mock max value
+    handleInputChange('100');
+  };
+  const handleHalf = () => {
+    // Mock half value
+    handleInputChange('50');
   };
 
   // Calculate current price
   const currentPrice = poolReserves ? calculatePoolPrice(poolReserves) : 0;
   const displayPrice = inputTokenSymbol === 'SOL' ? currentPrice : 1 / currentPrice;
+
+  // Helper to format token amount for display
+  function formatDisplayTokenAmount(amount: string): string {
+    if (!amount) return '';
+    const digitCount = amount.replace('.', '').length;
+    if (digitCount > 9) {
+      return formatTokenAmount(Number(amount));
+    }
+    return amount;
+  }
 
   return (
     <form onSubmit={handleSwap} className="space-y-0">
@@ -303,13 +340,13 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
           <div className="flex flex-col items-end">
             <input
               type="text"
-              value={inputAmount}
+              value={formatDisplayTokenAmount(inputAmount)}
               onChange={(e) => handleInputChange(e.target.value)}
-              className="w-48 bg-transparent text-3xl font-mono text-white outline-none placeholder:text-[#555] text-right"
+              className="w-48 bg-transparent text-3xl font-mono text-white outline-none placeholder:text-[#555] text-right overflow-hidden text-ellipsis whitespace-nowrap"
               placeholder="0.00"
             />
             <div className="text-xs text-[#b5b5b5] font-mono">
-              ${inputAmount && !isNaN(Number(inputAmount)) ? (Number(inputAmount) * (inputTokenSymbol === 'SOL' ? 145 : 1)).toFixed(2) : '0.00'}
+              ${inputAmount && !isNaN(Number(inputAmount)) ? (Number(inputAmount) * (inputTokenSymbol === 'SOL' ? solPrice : 1)).toFixed(2) : '0.00'}
             </div>
           </div>
         </div>
@@ -345,13 +382,17 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
           <div className="flex flex-col items-end">
             <input
               type="text"
-              value={outputAmount}
+              value={formatDisplayTokenAmount(outputAmount)}
               readOnly
-              className="w-48 bg-transparent text-3xl font-mono text-white outline-none placeholder:text-[#555] text-right"
+              className="w-48 bg-transparent text-3xl font-mono text-white outline-none placeholder:text-[#555] text-right overflow-hidden text-ellipsis whitespace-nowrap"
               placeholder="0.00"
             />
             <div className="text-xs text-[#b5b5b5] font-mono">
-              ${outputAmount && !isNaN(Number(outputAmount)) ? (Number(outputAmount) * (outputTokenSymbol === 'SOL' ? 145 : 1)).toFixed(2) : '0.00'}
+              ${outputAmount && !isNaN(Number(outputAmount)) ? 
+                (outputTokenSymbol === 'SOL' ? 
+                  (Number(outputAmount) * solPrice).toFixed(2) : 
+                  (Number(outputAmount) * calculatePoolPrice(poolReserves!) * solPrice).toFixed(2)
+                ) : '0.00'}
             </div>
           </div>
         </div>
