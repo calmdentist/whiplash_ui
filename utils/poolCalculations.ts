@@ -140,4 +140,53 @@ export function calculatePositionEntryPrice(
   
   // Convert to USD by multiplying by SOL price
   return entryRate * solPrice;
+}
+
+export function calculatePositionPnL({
+  isLong,
+  rawSize,
+  rawCollateral,
+  leverage
+}: {
+  isLong: boolean,
+  rawSize: number,
+  rawCollateral: number,
+  leverage: number
+},
+  reserves: PoolReserves,
+  solPrice: number
+): number {
+  // Leverage is already scaled (not raw from contract)
+  // For long: collateral in SOL, size in tokenY
+  // For short: collateral in tokenY, size in SOL
+  let output = 0;
+  let collateralUsd = 0;
+  let outputUsd = 0;
+  if (isLong) {
+    // Output: expectedOutput(size) - (collateral * (leverage - 1))
+    // size is in tokenY (raw, 6 decimals)
+    // expectedOutput: tokenY -> SOL
+    const sizeTokenY = rawSize / Math.pow(10, TOKEN_Y_DECIMALS);
+    const expectedSol = calculateExpectedOutput(reserves, sizeTokenY, false); // tokenY -> SOL
+    // Subtract borrowed amount (collateral * (leverage - 1)), collateral in SOL
+    const borrowedSol = (rawCollateral / LAMPORTS_PER_SOL) * (leverage - 1);
+    output = expectedSol - borrowedSol;
+    // USD values
+    outputUsd = output * solPrice;
+    collateralUsd = (rawCollateral / LAMPORTS_PER_SOL) * solPrice;
+  } else {
+    // Output: expectedOutput(size) - (collateral * (leverage - 1))
+    // size is in SOL (raw, 9 decimals)
+    // expectedOutput: SOL -> tokenY
+    const sizeSol = rawSize / LAMPORTS_PER_SOL;
+    const expectedTokenY = calculateExpectedOutput(reserves, sizeSol, true); // SOL -> tokenY
+    // Subtract borrowed amount (collateral * (leverage - 1)), collateral in tokenY
+    const borrowedTokenY = (rawCollateral / Math.pow(10, TOKEN_Y_DECIMALS)) * (leverage - 1);
+    output = expectedTokenY - borrowedTokenY;
+    // USD values
+    outputUsd = output * calculatePoolPrice(reserves) * solPrice;
+    collateralUsd = (rawCollateral / Math.pow(10, TOKEN_Y_DECIMALS)) * calculatePoolPrice(reserves) * solPrice;
+  }
+  if (collateralUsd === 0) return 0;
+  return ((outputUsd - collateralUsd) / collateralUsd) * 100;
 } 

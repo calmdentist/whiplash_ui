@@ -311,8 +311,14 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
 
   const handleMax = async () => {
     const balance = await getInputTokenBalance();
-    // Optionally, subtract a small buffer for SOL to avoid dust issues
-    const safeBalance = inputToken.mint === 'So11111111111111111111111111111111111111112' ? Math.max(balance - 0.001, 0) : balance;
+    let safeBalance;
+    if (inputToken.mint === 'So11111111111111111111111111111111111111112') {
+      // For SOL, subtract 0.001
+      safeBalance = Math.max(balance - 0.001, 0);
+    } else {
+      // For SPL tokens, subtract a small buffer (e.g., 0.000001 for 6 decimals)
+      safeBalance = Math.max(balance - 0.000001, 0);
+    }
     handleInputChange(safeBalance.toString());
   };
 
