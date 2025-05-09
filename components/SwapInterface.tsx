@@ -285,8 +285,9 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
       effectiveInput,
       isSolToTokenY
     );
-    
-    setOutputAmount(outputAmount.toFixed(outputTokenSymbol === 'SOL' ? 4 : 2));
+    // Use outputToken.mint to determine decimals for formatting
+    const isOutputSOL = outputToken.mint === 'So11111111111111111111111111111111111111112';
+    setOutputAmount(outputAmount.toFixed(isOutputSOL ? 4 : 2));
   };
 
   // Add effect to recalculate output when leverage changes
@@ -296,13 +297,29 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
     }
   }, [leverage, poolReserves, inputToken.mint]);
 
-  const handleMax = () => {
-    // Mock max value
-    handleInputChange('100');
+  // Helper to get the user's balance for the input token
+  async function getInputTokenBalance() {
+    if (!wallet.publicKey) return 0;
+    const balances = await getTokenBalances(wallet.publicKey.toString());
+    if (inputToken.mint === 'So11111111111111111111111111111111111111112') {
+      return balances.SOL;
+    } else {
+      const tokenBalance = balances.tokens.find(t => t.mint === inputToken.mint);
+      return tokenBalance?.amount || 0;
+    }
+  }
+
+  const handleMax = async () => {
+    const balance = await getInputTokenBalance();
+    // Optionally, subtract a small buffer for SOL to avoid dust issues
+    const safeBalance = inputToken.mint === 'So11111111111111111111111111111111111111112' ? Math.max(balance - 0.001, 0) : balance;
+    handleInputChange(safeBalance.toString());
   };
-  const handleHalf = () => {
-    // Mock half value
-    handleInputChange('50');
+
+  const handleHalf = async () => {
+    const balance = await getInputTokenBalance();
+    const half = balance / 2;
+    handleInputChange(half.toString());
   };
 
   // Calculate current price
@@ -346,7 +363,13 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
               placeholder="0.00"
             />
             <div className="text-xs text-[#b5b5b5] font-mono">
-              ${inputAmount && !isNaN(Number(inputAmount)) ? (Number(inputAmount) * (inputTokenSymbol === 'SOL' ? solPrice : 1)).toFixed(2) : '0.00'}
+              ${inputAmount && !isNaN(Number(inputAmount)) ? (
+                Number(inputAmount) * (
+                  inputTokenSymbol === 'SOL'
+                    ? solPrice
+                    : (poolReserves ? calculatePoolPrice(poolReserves) * solPrice : 0)
+                )
+              ).toFixed(2) : '0.00'}
             </div>
           </div>
         </div>
