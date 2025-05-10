@@ -174,13 +174,13 @@ export default function DocsPage() {
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-72px)]">
       {/* Sidebar */}
-      <div className="w-full md:w-64 bg-card p-4 md:min-h-[calc(100vh-72px)] border-r border-border">
+      <div className="w-full md:w-64 bg-card p-4 md:min-h-[calc(100vh-72px)] border-r border-border rounded-2xl md:rounded-l-2xl">
         <h2 className="text-xl font-bold mb-4 font-mono">Documentation</h2>
         <nav className="space-y-1">
           {sections.map((section) => (
             <button
               key={section.id}
-              className={`w-full p-2 text-left rounded-lg transition font-mono ${
+              className={`w-full p-2 text-left rounded-xl transition font-mono ${
                 activeSection === section.id
                   ? 'bg-primary text-primary-foreground'
                   : 'hover:bg-secondary/60'
@@ -193,7 +193,7 @@ export default function DocsPage() {
           <Link 
             href="/whiplash_whitepaper.tex" 
             target="_blank"
-            className="block w-full p-2 text-left rounded-lg transition font-mono text-primary hover:bg-secondary/60 mt-4"
+            className="block w-full p-2 text-left rounded-xl transition font-mono text-primary hover:bg-secondary/60 mt-4"
           >
             Download Whitepaper
           </Link>
