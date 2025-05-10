@@ -45,9 +45,9 @@ async function getPoolsData() {
   const now = Date.now();
   if (now - lastFetchTime > CACHE_DURATION) {
     try {
-      const response = await fetch('http://localhost:3000/api/pools');
-      const data = await response.json();
-      poolsCache = data.pools;
+      // Use the fetchAllPools util directly
+      const data = await fetchAllPools();
+      poolsCache = data;
       lastFetchTime = now;
     } catch (error) {
       console.error('Error fetching pools:', error);

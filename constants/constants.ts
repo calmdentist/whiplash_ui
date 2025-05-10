@@ -1,6 +1,10 @@
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 // RPC configuration
 // export const RPC_URL = "https://christie-jbe1oy-fast-mainnet.helius-rpc.com";
-export const RPC_URL = "http://127.0.0.1:8899";
+export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "http://127.0.0.1:8899";
 
 // Whiplash program details
 export const WHIPLASH_PROGRAM_ID = "GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ";
