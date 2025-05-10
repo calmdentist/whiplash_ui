@@ -19,11 +19,13 @@ export default function DynamicTradePage() {
       }
       // Validate it's a valid Solana address
       new PublicKey(outputToken);
+      // If valid, redirect to /trade with query param
+      router.push(`/trade?initialOutputToken=${outputToken}`);
     } catch (error) {
       // If not a valid address, redirect to main trade page
       router.push('/trade');
     }
   }, [outputToken, router]);
 
-  return <TradePage initialOutputToken={outputToken} />;
+  return <div className="text-white p-8">Redirecting...</div>;
 } 

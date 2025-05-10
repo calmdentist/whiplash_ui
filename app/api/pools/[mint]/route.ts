@@ -6,13 +6,15 @@ export const dynamic = "force-dynamic";
 
 const PROGRAM_ID = new PublicKey("GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ");
 
-export async function GET(
-  request: Request,
-  { params }: { params: { mint: string } }
-) {
+export async function GET(request: Request) {
   try {
+    const { pathname } = new URL(request.url);
+    // pathname will be like /api/pools/<mint>
+    const parts = pathname.split("/");
+    const mint = parts[parts.length - 1];
+
     const connection = new Connection(RPC_URL);
-    const tokenYMint = new PublicKey(params.mint);
+    const tokenYMint = new PublicKey(mint);
 
     // Fetch all program accounts of type Pool
     const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
