@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from "@solana/web3.js";
-import { Program, AnchorProvider, Idl, ProgramAccount } from "@project-serum/anchor";
+import { Program, AnchorProvider, Idl, ProgramAccount } from "@coral-xyz/anchor";
 import { NextResponse } from "next/server";
 import { RPC_URL, WHIPLASH_PROGRAM_ID } from "@/constants/constants";
 import IDL from "@/idl/whiplash.json";
