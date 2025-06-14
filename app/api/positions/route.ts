@@ -74,6 +74,7 @@ export async function GET(request: Request) {
     const formattedPositions = poolPositions.map((position) => {
       const positionAccount = position.account as unknown as PositionAccount;
       return {
+        address: position.publicKey.toString(),
         authority: positionAccount.authority.toString(),
         pool: positionAccount.pool.toString(),
         positionVault: positionAccount.positionVault.toString(),

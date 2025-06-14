@@ -403,6 +403,10 @@
             "type": "u64"
           },
           {
+            "name": "deltaK",
+            "type": "u128"
+          },
+          {
             "name": "nonce",
             "type": "u64"
           },
@@ -659,63 +663,73 @@
     },
     {
       "code": 6005,
+      "name": "MathUnderflow",
+      "msg": "Mathematical operation underflow"
+    },
+    {
+      "code": 6006,
       "name": "PoolAlreadyInitialized",
       "msg": "Pool already initialized"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "ZeroLiquidity",
       "msg": "Zero liquidity provided"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "ZeroSwapAmount",
       "msg": "Zero swap amount"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "InvalidPoolState",
       "msg": "Invalid pool state"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "Unauthorized",
       "msg": "Unauthorized operation"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "MetadataCreationFailed",
       "msg": "Failed to create metadata account"
     },
     {
-      "code": 6011,
+      "code": 6012,
       "name": "AuthorityChangeFailed",
       "msg": "Failed to change token authority"
     },
     {
-      "code": 6012,
+      "code": 6013,
       "name": "PositionNotLiquidatable",
       "msg": "Position cannot be liquidated"
     },
     {
-      "code": 6013,
+      "code": 6014,
       "name": "InvalidPosition",
       "msg": "Invalid position"
     },
     {
-      "code": 6014,
+      "code": 6015,
       "name": "InsufficientOutput",
       "msg": "Insufficient output amount"
     },
     {
-      "code": 6015,
+      "code": 6016,
       "name": "InsufficientFunds",
       "msg": "Insufficient funds for transaction"
     },
     {
-      "code": 6016,
+      "code": 6017,
       "name": "InvalidLeverage",
       "msg": "Invalid leverage"
+    },
+    {
+      "code": 6018,
+      "name": "PositionNotClosable",
+      "msg": "Position cannot be closed (would require liquidation)"
     }
   ],
   "metadata": {

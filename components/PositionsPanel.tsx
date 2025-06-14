@@ -13,6 +13,8 @@ const SOL_DECIMALS = 9;
 const TOKEN_Y_DECIMALS = 6;
 
 interface RawPosition {
+  address: string;
+  pool: string;
   size: string;
   collateral: string;
   leverage: number;
@@ -22,6 +24,8 @@ interface RawPosition {
 }
 
 interface TransformedPosition {
+  address: string;
+  pool: string;
   rawSize: number;
   rawCollateral: number;
   leverage: number;
@@ -50,6 +54,8 @@ function transformPositions(positions: RawPosition[]): TransformedPosition[] {
       : formatTokenAmount(rawCollateral / Math.pow(10, TOKEN_Y_DECIMALS));
 
     return {
+      address: pos.address,
+      pool: pos.pool,
       rawSize,
       rawCollateral,
       leverage,
@@ -153,15 +159,14 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
     }
   }, [wallet.publicKey, tokenYMint, isOpen]);
 
-  const handleClosePosition = async (positionVault: string, nonce: number) => {
-    if (!wallet.publicKey || !tokenYMint || !wallet.signTransaction || !wallet.sendTransaction) return;
+  const handleClosePosition = async (pos: TransformedPosition) => {
+    if (!wallet.publicKey || !wallet.signTransaction || !wallet.sendTransaction) return;
     
     try {
       const transaction = await createClosePositionTransaction({
-        pool: new PublicKey(tokenYMint), // Use the token mint as the pool address
-        positionVault: new PublicKey(positionVault),
-        nonce, // Pass the nonce
-        wallet: wallet
+        pool: new PublicKey(pos.pool),
+        position: new PublicKey(pos.address),
+        wallet: wallet,
       });
 
       // Sign and send transaction using wallet context
@@ -297,7 +302,7 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
                   </div>
 
                   <button
-                    onClick={() => handleClosePosition(position.positionVault, position.nonce)}
+                    onClick={() => handleClosePosition(position)}
                     className="w-full py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-mono text-sm transition-colors"
                   >
                     Close Position

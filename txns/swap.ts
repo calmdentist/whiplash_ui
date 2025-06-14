@@ -4,7 +4,6 @@ import {
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
   LAMPORTS_PER_SOL,
-  Keypair,
   ComputeBudgetProgram
 } from '@solana/web3.js';
 import { 
@@ -47,9 +46,8 @@ interface LeverageSwapParams extends SwapParams {
 }
 
 interface ClosePositionParams {
-  pool: PublicKey;
-  positionVault: PublicKey;
-  nonce: number;
+  pool: PublicKey; // Pool PDA
+  position: PublicKey; // Position account address
   wallet: WalletContextState;
 }
 
@@ -230,7 +228,7 @@ export async function createLeverageSwapTransaction({
     new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ')
   );
 
-  // Create position token account - using allowOwnerOffCurve as in the test file
+  // Derive associated token account for the position PDA
   const positionTokenAccount = await getAssociatedTokenAddress(
     tokenYMint,
     position,
@@ -314,8 +312,7 @@ export async function createLeverageSwapTransaction({
 
 export async function createClosePositionTransaction({
   pool,
-  positionVault,
-  nonce,
+  position,
   wallet,
 }: ClosePositionParams): Promise<Transaction> {
   if (!wallet.publicKey) {
@@ -332,36 +329,12 @@ export async function createClosePositionTransaction({
   const provider = new AnchorProvider(connection, anchorWallet, {});
   const program = new Program(IDL as Idl, new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ'), provider);
 
-  // Derive pool PDA first - using the same seeds as in the test file
-  const [poolPda] = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from('pool'),
-      pool.toBuffer(), // pool is the token mint
-    ],
-    new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ')
-  );
-
-  // Get pool data to determine token accounts
-  const poolData = (await program.account.pool.fetch(poolPda)) as unknown as PoolAccount;
+  // Fetch pool data directly using pool PDA provided
+  const poolData = (await program.account.pool.fetch(pool)) as unknown as PoolAccount;
   const tokenYMint = poolData.tokenYMint;
   const tokenYVault = poolData.tokenYVault;
 
-  // Convert nonce to BN and get its bytes
-  const nonceBN = new BN(nonce);
-  const nonceBytes = nonceBN.toArrayLike(Buffer, "le", 8);
-
-  // Derive position PDA with nonce
-  const [position] = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from('position'),
-      poolPda.toBuffer(),
-      wallet.publicKey.toBuffer(),
-      nonceBytes,
-    ],
-    new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ')
-  );
-
-  // Create position token account - using allowOwnerOffCurve as in the test file
+  // Derive associated token account for the position PDA
   const positionTokenAccount = await getAssociatedTokenAddress(
     tokenYMint,
     position,
@@ -397,7 +370,7 @@ export async function createClosePositionTransaction({
     .closePosition()
     .accounts({
       user: wallet.publicKey,
-      pool: poolPda,
+      pool,
       tokenYVault,
       position,
       positionTokenAccount,
