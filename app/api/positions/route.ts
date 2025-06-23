@@ -7,6 +7,8 @@ import { BN } from 'bn.js';
 import { RPC_URL, WHIPLASH_PROGRAM_ID } from '@/constants/constants';
 import { connection } from '@/utils/connection';
 
+export const dynamic = "force-dynamic";
+
 // Program ID from IDL metadata
 const PROGRAM_ID = new PublicKey(WHIPLASH_PROGRAM_ID);
 

@@ -359,6 +359,14 @@
             "type": "u64"
           },
           {
+            "name": "leveragedTokenYAmount",
+            "type": "u64"
+          },
+          {
+            "name": "leveragedSolAmount",
+            "type": "u64"
+          },
+          {
             "name": "bump",
             "type": "u8"
           }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useConnection } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
+import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { WalletIcon } from '@heroicons/react/24/outline';
 import { MAX_LEVERAGE } from '@/constants/constants';
 import TokenDropdown from '@/components/TokenDropdown';
@@ -23,26 +23,48 @@ interface TokenState {
 
 function BalanceChip({ token }: { token: TokenState }) {
   const { publicKey } = useWallet();
+  const { connection } = useConnection();
   const [balance, setBalance] = useState<number>(0);
 
   useEffect(() => {
-    async function fetchBalance() {
-      if (!publicKey) return;
-      const balances = await getTokenBalances(publicKey.toString());
-      if (token.mint === 'So11111111111111111111111111111111111111112') {
-        setBalance(balances.SOL);
-      } else {
+    if (!publicKey || !connection) return;
+
+    if (token.mint === 'So11111111111111111111111111111111111111112') {
+      // Function to fetch and set SOL balance
+      const fetchSOLBalance = async () => {
+        const balance = await connection.getBalance(publicKey);
+        setBalance(balance / LAMPORTS_PER_SOL);
+      };
+
+      fetchSOLBalance();
+
+      // Subscribe to account changes
+      const subscriptionId = connection.onAccountChange(
+        publicKey,
+        (accountInfo) => {
+          setBalance(accountInfo.lamports / LAMPORTS_PER_SOL);
+        },
+        'confirmed'
+      );
+
+      return () => {
+        connection.removeAccountChangeListener(subscriptionId);
+      };
+    } else {
+      async function fetchBalance() {
+        if (!publicKey) return;
+        const balances = await getTokenBalances(publicKey.toString());
         const tokenBalance = balances.tokens.find(t => t.mint === token.mint);
         setBalance(tokenBalance?.amount || 0);
       }
+      fetchBalance();
     }
-    fetchBalance();
-  }, [publicKey, token.mint]);
+  }, [publicKey, token.mint, connection]);
 
   return (
     <div className="text-xs px-2 py-1 rounded bg-[#1a1b20] text-[#b5b5b5] flex items-center gap-1">
       <WalletIcon className="w-3 h-3" />
-      {balance.toFixed(2)}
+      {balance.toFixed(4)}
     </div>
   );
 }

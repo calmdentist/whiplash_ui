@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { fetchAllPools } from '../utils/fetchAllPools';
 
+export const dynamic = "force-dynamic";
+
 // Default tokens that should always be available
 const DEFAULT_TOKENS = [
   {

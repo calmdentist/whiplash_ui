@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { toast } from 'sonner';
@@ -6,7 +6,7 @@ import { createClosePositionTransaction } from '@/txns/swap';
 import { PublicKey } from '@solana/web3.js';
 import { connection } from '@/utils/connection';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { formatNumber, formatTokenAmount, calculatePositionEntryPrice, calculatePoolPrice, calculateExpectedOutput, calculatePositionPnL } from '@/utils/poolCalculations';
+import { formatNumber, formatTokenAmount, calculatePositionEntryPrice, calculatePoolPrice, calculateExpectedOutput, calculatePositionPnL, getPoolReserves } from '@/utils/poolCalculations';
 
 // Constants for decimals
 const SOL_DECIMALS = 9;
@@ -81,12 +81,32 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
   const [isLoading, setIsLoading] = useState(false);
   const [tokenMetadata, setTokenMetadata] = useState<{ symbol: string } | null>(null);
   const [solPrice, setSolPrice] = useState<number>(0);
+  const [poolAddress, setPoolAddress] = useState<string | null>(null);
   const [poolData, setPoolData] = useState<{
     solReserve: number;
     virtualSolReserve: number;
     tokenYReserve: number;
     virtualTokenYReserve: number;
   } | null>(null);
+
+  const fetchPositions = useCallback(async () => {
+    if (!wallet.publicKey || !tokenYMint) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/positions?user=${wallet.publicKey.toString()}&tokenYMint=${tokenYMint}`);
+      if (!response.ok) throw new Error('Failed to fetch positions');
+      const data = await response.json();
+      
+      const transformedPositions = transformPositions(data.positions);
+      setPositions(transformedPositions);
+    } catch (error) {
+      console.error('Error fetching positions:', error);
+      toast.error('Failed to fetch positions');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [wallet.publicKey, tokenYMint]);
 
   useEffect(() => {
     async function fetchTokenMetadata() {
@@ -97,6 +117,7 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
         if (!response.ok) throw new Error('Failed to fetch token metadata');
         const data = await response.json();
         setTokenMetadata(data.metadata || { symbol: tokenYMint.slice(0, 4) + '...' });
+        setPoolAddress(data.pool);
         setPoolData({
           solReserve: data.solReserve,
           virtualSolReserve: data.virtualSolReserve,
@@ -113,6 +134,29 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
       fetchTokenMetadata();
     }
   }, [tokenYMint, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !poolAddress) return;
+
+    const poolPublicKey = new PublicKey(poolAddress);
+    const subscriptionId = connection.onAccountChange(
+      poolPublicKey,
+      async () => {
+        try {
+          const reserves = await getPoolReserves(poolPublicKey);
+          setPoolData(reserves);
+          await fetchPositions();
+        } catch (error) {
+          console.error('Error refreshing pool data:', error);
+        }
+      },
+      'confirmed'
+    );
+
+    return () => {
+      connection.removeAccountChangeListener(subscriptionId);
+    };
+  }, [isOpen, poolAddress, fetchPositions]);
 
   useEffect(() => {
     async function fetchSolPrice() {
@@ -135,29 +179,10 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
   }, [isOpen]);
 
   useEffect(() => {
-    async function fetchPositions() {
-      if (!wallet.publicKey || !tokenYMint) return;
-      
-      setIsLoading(true);
-      try {
-        const response = await fetch(`/api/positions?user=${wallet.publicKey.toString()}&tokenYMint=${tokenYMint}`);
-        if (!response.ok) throw new Error('Failed to fetch positions');
-        const data = await response.json();
-        
-        const transformedPositions = transformPositions(data.positions);
-        setPositions(transformedPositions);
-      } catch (error) {
-        console.error('Error fetching positions:', error);
-        toast.error('Failed to fetch positions');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
     if (isOpen) {
       fetchPositions();
     }
-  }, [wallet.publicKey, tokenYMint, isOpen]);
+  }, [isOpen, fetchPositions]);
 
   const handleClosePosition = async (pos: TransformedPosition) => {
     if (!wallet.publicKey || !wallet.signTransaction || !wallet.sendTransaction) return;
@@ -179,12 +204,7 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
       toast.success('Position closed successfully');
       
       // Refresh positions
-      const response = await fetch(`/api/positions?user=${wallet.publicKey.toString()}&tokenYMint=${tokenYMint}`);
-      if (!response.ok) throw new Error('Failed to fetch positions');
-      const data = await response.json();
-      
-      const transformedPositions = transformPositions(data.positions);
-      setPositions(transformedPositions);
+      await fetchPositions();
     } catch (error) {
       console.error('Error closing position:', error);
       toast.error('Failed to close position');
