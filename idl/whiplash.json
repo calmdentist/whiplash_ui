@@ -391,20 +391,12 @@
             "type": "u64"
           },
           {
-            "name": "leverage",
-            "type": "u32"
-          },
-          {
-            "name": "entryPrice",
-            "type": "u128"
-          },
-          {
-            "name": "size",
+            "name": "spotSize",
             "type": "u64"
           },
           {
-            "name": "deltaK",
-            "type": "u128"
+            "name": "debtSize",
+            "type": "u64"
           },
           {
             "name": "nonce",
@@ -730,6 +722,11 @@
       "code": 6018,
       "name": "PositionNotClosable",
       "msg": "Position cannot be closed (would require liquidation)"
+    },
+    {
+      "code": 6019,
+      "name": "NotImplemented",
+      "msg": "Functionality not yet implemented"
     }
   ],
   "metadata": {

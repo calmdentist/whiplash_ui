@@ -17,9 +17,8 @@ interface PositionAccount {
   positionVault: PublicKey;
   isLong: boolean;
   collateral: typeof BN;
-  leverage: number;
-  entryPrice: typeof BN;
-  size: typeof BN;
+  spotSize: typeof BN;
+  debtSize: typeof BN;
   nonce: typeof BN;
   bump: number;
 }
@@ -80,9 +79,8 @@ export async function GET(request: Request) {
         positionVault: positionAccount.positionVault.toString(),
         isLong: positionAccount.isLong,
         collateral: positionAccount.collateral.toString(),
-        leverage: positionAccount.leverage,
-        entryPrice: positionAccount.entryPrice.toString(),
-        size: positionAccount.size.toString(),
+        spotSize: positionAccount.spotSize.toString(),
+        debtSize: positionAccount.debtSize.toString(),
         nonce: positionAccount.nonce.toString(),
       };
     });

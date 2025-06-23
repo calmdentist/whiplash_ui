@@ -118,7 +118,7 @@ export async function getPoolReserves(
 }
 
 export function calculatePositionEntryPrice(
-  size: number,
+  spotSize: number,
   collateral: number,
   leverage: number,
   isLong: boolean,
@@ -130,12 +130,12 @@ export function calculatePositionEntryPrice(
     // For long positions: (collateral * leverage) / size
     // collateral is in SOL (9 decimals), size is in TOKEN (6 decimals)
     // Need to adjust for decimal difference: 9 - 6 = 3 decimals
-    entryRate = (collateral * leverage) / (size * Math.pow(10, 3));
+    entryRate = (collateral * leverage) / (spotSize * Math.pow(10, 3));
   } else {
     // For short positions: size / (collateral * leverage)
     // size is in SOL (9 decimals), collateral is in TOKEN (6 decimals)
     // Need to adjust for decimal difference: 9 - 6 = 3 decimals
-    entryRate = (size * Math.pow(10, 3)) / (collateral * leverage);
+    entryRate = (spotSize * Math.pow(10, 3)) / (collateral * leverage);
   }
   
   // Convert to USD by multiplying by SOL price
@@ -144,12 +144,12 @@ export function calculatePositionEntryPrice(
 
 export function calculatePositionPnL({
   isLong,
-  rawSize,
+  rawSpotSize,
   rawCollateral,
   leverage
 }: {
   isLong: boolean,
-  rawSize: number,
+  rawSpotSize: number,
   rawCollateral: number,
   leverage: number
 },
@@ -166,7 +166,7 @@ export function calculatePositionPnL({
     // Output: expectedOutput(size) - (collateral * (leverage - 1))
     // size is in tokenY (raw, 6 decimals)
     // expectedOutput: tokenY -> SOL
-    const sizeTokenY = rawSize / Math.pow(10, TOKEN_Y_DECIMALS);
+    const sizeTokenY = rawSpotSize / Math.pow(10, TOKEN_Y_DECIMALS);
     const expectedSol = calculateExpectedOutput(reserves, sizeTokenY, false); // tokenY -> SOL
     // Subtract borrowed amount (collateral * (leverage - 1)), collateral in SOL
     const borrowedSol = (rawCollateral / LAMPORTS_PER_SOL) * (leverage - 1);
@@ -178,7 +178,7 @@ export function calculatePositionPnL({
     // Output: expectedOutput(size) - (collateral * (leverage - 1))
     // size is in SOL (raw, 9 decimals)
     // expectedOutput: SOL -> tokenY
-    const sizeSol = rawSize / LAMPORTS_PER_SOL;
+    const sizeSol = rawSpotSize / LAMPORTS_PER_SOL;
     const expectedTokenY = calculateExpectedOutput(reserves, sizeSol, true); // SOL -> tokenY
     // Subtract borrowed amount (collateral * (leverage - 1)), collateral in tokenY
     const borrowedTokenY = (rawCollateral / Math.pow(10, TOKEN_Y_DECIMALS)) * (leverage - 1);

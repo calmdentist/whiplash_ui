@@ -15,18 +15,19 @@ const TOKEN_Y_DECIMALS = 6;
 interface RawPosition {
   address: string;
   pool: string;
-  size: string;
+  spotSize: string;
+  debtSize: string;
   collateral: string;
-  leverage: number;
   positionVault: string;
-  nonce: number;
+  nonce: string;
   isLong: boolean;
 }
 
 interface TransformedPosition {
   address: string;
   pool: string;
-  rawSize: number;
+  rawSpotSize: number;
+  rawDebtSize: number;
   rawCollateral: number;
   leverage: number;
   positionVault: string;
@@ -40,14 +41,17 @@ interface TransformedPosition {
 function transformPositions(positions: RawPosition[]): TransformedPosition[] {
   return positions.map(pos => {
     // Convert raw numbers from chain
-    const rawSize = Number(pos.size);
+    const rawSpotSize = Number(pos.spotSize);
+    const rawDebtSize = Number(pos.debtSize);
     const rawCollateral = Number(pos.collateral);
-    const leverage = Number(pos.leverage) / 10;
+
+    // Calculate leverage
+    const leverage = rawCollateral > 0 ? rawSpotSize / rawCollateral : 0;
 
     // Format numbers for display
     const formattedSize = pos.isLong 
-      ? formatTokenAmount(rawSize / Math.pow(10, TOKEN_Y_DECIMALS))
-      : formatTokenAmount(rawSize / LAMPORTS_PER_SOL);
+      ? formatTokenAmount(rawSpotSize / Math.pow(10, TOKEN_Y_DECIMALS))
+      : formatTokenAmount(rawSpotSize / LAMPORTS_PER_SOL);
     
     const formattedCollateral = pos.isLong
       ? formatTokenAmount(rawCollateral / LAMPORTS_PER_SOL)
@@ -56,11 +60,12 @@ function transformPositions(positions: RawPosition[]): TransformedPosition[] {
     return {
       address: pos.address,
       pool: pos.pool,
-      rawSize,
+      rawSpotSize,
+      rawDebtSize,
       rawCollateral,
       leverage,
       positionVault: pos.positionVault,
-      nonce: pos.nonce,
+      nonce: Number(pos.nonce),
       isLong: pos.isLong,
       formattedSize,
       formattedCollateral,
@@ -243,18 +248,28 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
                   <div className="flex justify-between items-center">
                     <span className="text-[#b5b5b5] text-sm">PnL</span>
                     <span className={`text-white font-mono ${poolData ? (() => {
-                      const pnl = calculatePositionPnL(position, poolData, solPrice);
+                      const pnl = calculatePositionPnL({
+                        isLong: position.isLong,
+                        rawSpotSize: position.rawSpotSize,
+                        rawCollateral: position.rawCollateral,
+                        leverage: position.leverage
+                      }, poolData, solPrice);
                       return pnl > 0 ? 'text-green-400' : pnl < 0 ? 'text-red-400' : '';
                     })() : ''}`}>
                       {poolData ? (() => {
                         // Calculate PnL and multiple
-                        const pnl = calculatePositionPnL(position, poolData, solPrice);
+                        const pnl = calculatePositionPnL({
+                          isLong: position.isLong,
+                          rawSpotSize: position.rawSpotSize,
+                          rawCollateral: position.rawCollateral,
+                          leverage: position.leverage
+                        }, poolData, solPrice);
                         // For multiple, we need outputUsd and collateralUsd
                         let outputUsd = 0;
                         let collateralUsd = 0;
                         if (position.isLong) {
                           // Long: output = expectedOutput(size) - (collateral * (leverage - 1)), all in SOL
-                          const sizeTokenY = position.rawSize / Math.pow(10, 6);
+                          const sizeTokenY = position.rawSpotSize / Math.pow(10, 6);
                           const expectedSol = calculateExpectedOutput(poolData, sizeTokenY, false);
                           const borrowedSol = (position.rawCollateral / LAMPORTS_PER_SOL) * (position.leverage - 1);
                           const output = expectedSol - borrowedSol;
@@ -262,7 +277,7 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
                           collateralUsd = (position.rawCollateral / LAMPORTS_PER_SOL) * solPrice;
                         } else {
                           // Short: output = expectedOutput(size) - (collateral * (leverage - 1)), all in tokenY
-                          const sizeSol = position.rawSize / LAMPORTS_PER_SOL;
+                          const sizeSol = position.rawSpotSize / LAMPORTS_PER_SOL;
                           const expectedTokenY = calculateExpectedOutput(poolData, sizeSol, true);
                           const borrowedTokenY = (position.rawCollateral / Math.pow(10, 6)) * (position.leverage - 1);
                           const output = expectedTokenY - borrowedTokenY;
@@ -314,7 +329,7 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
                       <span className="text-[#b5b5b5] text-sm">Entry Price</span>
                       <span className="text-white font-mono">
                         ${calculatePositionEntryPrice(
-                          position.rawSize,
+                          position.rawSpotSize,
                           position.rawCollateral,
                           position.leverage,
                           position.isLong,
