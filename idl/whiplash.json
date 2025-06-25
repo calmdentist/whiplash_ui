@@ -415,6 +415,10 @@
             "type": "u128"
           },
           {
+            "name": "leveragedTokenAmount",
+            "type": "u64"
+          },
+          {
             "name": "nonce",
             "type": "u64"
           },

@@ -483,6 +483,24 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
         <span>Fee: <span className="text-white">~$0.01</span></span>
       </div>
 
+      {/* Reserves Info */}
+      {poolReserves && (
+        <div className="text-xs font-mono text-[#b5b5b5] px-2 mt-4 space-y-1">
+          <div className="flex justify-between items-center">
+            <span>SOL Reserves (real/virtual):</span>
+            <span className="text-white">
+              {formatTokenAmount(poolReserves.solReserve / LAMPORTS_PER_SOL)} / {formatTokenAmount(poolReserves.virtualSolReserve / LAMPORTS_PER_SOL)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span>{outputTokenSymbol} Reserves (real/virtual):</span>
+            <span className="text-white">
+              {formatTokenAmount(poolReserves.tokenYReserve / 1e6)} / {formatTokenAmount(poolReserves.virtualTokenYReserve / 1e6)}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Add vertical space before buttons */}
       <div style={{ marginTop: '18px' }} />
 
