@@ -19,6 +19,7 @@ interface Pool {
   virtualTokenYAmount: string;
   lamports: string;
   virtualSolAmount: string;
+  creationTimestamp: string;
   metadata?: {
     name: string;
     symbol: string;

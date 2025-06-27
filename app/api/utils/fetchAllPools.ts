@@ -13,6 +13,7 @@ export interface Pool {
   virtualTokenYAmount: string;
   lamports: string;
   virtualSolAmount: string;
+  creationTimestamp: string;
   metadata?: {
     name: string;
     symbol: string;
@@ -83,6 +84,7 @@ export async function fetchAllPools(): Promise<Pool[]> {
           virtualTokenYAmount: pool.account.virtualTokenYAmount.toString(),
           lamports: pool.account.lamports.toString(),
           virtualSolAmount: pool.account.virtualSolAmount.toString(),
+          creationTimestamp: pool.account.creationTimestamp.toString(),
         };
 
         const metadata = await getTokenMetadata(connection, basePool.tokenYMint);
