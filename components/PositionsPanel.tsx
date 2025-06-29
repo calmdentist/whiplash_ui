@@ -6,7 +6,7 @@ import { createClosePositionTransaction } from '@/txns/swap';
 import { PublicKey } from '@solana/web3.js';
 import { connection } from '@/utils/connection';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { formatNumber, formatTokenAmount, calculatePositionEntryPrice, calculatePoolPrice, calculateExpectedOutput, calculatePositionPnL, getPoolReserves } from '@/utils/poolCalculations';
+import { formatNumber, formatTokenAmount, calculatePositionEntryPrice, calculatePoolPrice, calculateRealReservesPrice, calculateExpectedOutput, calculatePositionPnL, getPoolReserves } from '@/utils/poolCalculations';
 
 // Constants for decimals
 const SOL_DECIMALS = 9;
@@ -87,6 +87,8 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
     virtualSolReserve: number;
     tokenYReserve: number;
     virtualTokenYReserve: number;
+    leveragedSolAmount: number;
+    leveragedTokenYAmount: number;
   } | null>(null);
 
   const fetchPositions = useCallback(async () => {
@@ -122,7 +124,9 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
           solReserve: data.solReserve,
           virtualSolReserve: data.virtualSolReserve,
           tokenYReserve: data.tokenYReserve,
-          virtualTokenYReserve: data.virtualTokenYReserve
+          virtualTokenYReserve: data.virtualTokenYReserve,
+          leveragedSolAmount: data.leveragedSolAmount,
+          leveragedTokenYAmount: data.leveragedTokenYAmount
         });
       } catch (error) {
         console.error('Error fetching token metadata:', error);
@@ -263,13 +267,32 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
                   <div className="flex justify-between items-center">
                     <span className="text-[#b5b5b5] text-sm">PnL</span>
                     <span className={`text-white font-mono ${poolData ? (() => {
-                      const pnl = calculatePositionPnL(position, poolData, solPrice);
-                      return pnl > 0 ? 'text-green-400' : pnl < 0 ? 'text-red-400' : '';
+                      // Calculate multiple and derive percentage from it
+                      let outputUsd = 0;
+                      let collateralUsd = 0;
+                      if (position.isLong) {
+                        // Long: output = expectedOutput(size) - (collateral * (leverage - 1)), all in SOL
+                        const sizeTokenY = position.rawSize / Math.pow(10, 6);
+                        const expectedSol = calculateExpectedOutput(poolData, sizeTokenY, false);
+                        const borrowedSol = (position.rawCollateral / LAMPORTS_PER_SOL) * (position.leverage - 1);
+                        const output = expectedSol - borrowedSol;
+                        outputUsd = output * solPrice;
+                        collateralUsd = (position.rawCollateral / LAMPORTS_PER_SOL) * solPrice;
+                      } else {
+                        // Short: output = expectedOutput(size) - (collateral * (leverage - 1)), all in tokenY
+                        const sizeSol = position.rawSize / LAMPORTS_PER_SOL;
+                        const expectedTokenY = calculateExpectedOutput(poolData, sizeSol, true);
+                        const borrowedTokenY = (position.rawCollateral / Math.pow(10, 6)) * (position.leverage - 1);
+                        const output = expectedTokenY - borrowedTokenY;
+                        outputUsd = output * calculateRealReservesPrice(poolData) * solPrice;
+                        collateralUsd = (position.rawCollateral / Math.pow(10, 6)) * calculateRealReservesPrice(poolData) * solPrice;
+                      }
+                      const multiple = collateralUsd === 0 ? 1 : outputUsd / collateralUsd;
+                      const percentage = (multiple - 1) * 100;
+                      return percentage > 0 ? 'text-green-400' : percentage < 0 ? 'text-red-400' : '';
                     })() : ''}`}>
                       {poolData ? (() => {
-                        // Calculate PnL and multiple
-                        const pnl = calculatePositionPnL(position, poolData, solPrice);
-                        // For multiple, we need outputUsd and collateralUsd
+                        // Calculate multiple and derive percentage from it
                         let outputUsd = 0;
                         let collateralUsd = 0;
                         if (position.isLong) {
@@ -286,11 +309,12 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
                           const expectedTokenY = calculateExpectedOutput(poolData, sizeSol, true);
                           const borrowedTokenY = (position.rawCollateral / Math.pow(10, 6)) * (position.leverage - 1);
                           const output = expectedTokenY - borrowedTokenY;
-                          outputUsd = output * calculatePoolPrice(poolData) * solPrice;
-                          collateralUsd = (position.rawCollateral / Math.pow(10, 6)) * calculatePoolPrice(poolData) * solPrice;
+                          outputUsd = output * calculateRealReservesPrice(poolData) * solPrice;
+                          collateralUsd = (position.rawCollateral / Math.pow(10, 6)) * calculateRealReservesPrice(poolData) * solPrice;
                         }
                         const multiple = collateralUsd === 0 ? 1 : outputUsd / collateralUsd;
-                        return `${multiple.toFixed(2)}x (${pnl.toFixed(2)}%)`;
+                        const percentage = (multiple - 1) * 100;
+                        return `${multiple.toFixed(2)}x (${percentage.toFixed(2)}%)`;
                       })() : '...'}
                     </span>
                   </div>
@@ -345,7 +369,7 @@ export default function PositionsPanel({ isOpen, onClose, tokenYMint }: Position
                     <div className="flex justify-between items-center">
                       <span className="text-[#b5b5b5] text-sm">Current Price</span>
                       <span className="text-white font-mono">
-                        ${poolData ? (calculatePoolPrice(poolData) * solPrice).toFixed(8) : '0.00'}
+                        ${poolData ? (calculateRealReservesPrice(poolData) * solPrice).toFixed(8) : '0.00'}
                       </span>
                     </div>
                   </div>

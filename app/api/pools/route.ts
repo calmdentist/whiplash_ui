@@ -116,6 +116,8 @@ export async function GET(request: Request) {
     const virtualSolReserve = Number(poolAccount.virtualSolAmount);
     const tokenYReserve = Number(poolAccount.tokenYAmount);
     const virtualTokenYReserve = Number(poolAccount.virtualTokenYAmount);
+    const leveragedSolAmount = Number(poolAccount.leveragedSolAmount);
+    const leveragedTokenYAmount = Number(poolAccount.leveragedTokenYAmount);
     
     const price = (solReserve + virtualSolReserve) / (tokenYReserve + virtualTokenYReserve);
 
@@ -126,7 +128,9 @@ export async function GET(request: Request) {
       solReserve,
       virtualSolReserve,
       tokenYReserve,
-      virtualTokenYReserve
+      virtualTokenYReserve,
+      leveragedSolAmount,
+      leveragedTokenYAmount
     });
   } catch (error) {
     console.error('Error fetching pool:', error);

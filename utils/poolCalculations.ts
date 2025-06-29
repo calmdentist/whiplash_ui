@@ -9,6 +9,8 @@ interface PoolReserves {
   virtualSolReserve: number;
   tokenYReserve: number;
   virtualTokenYReserve: number;
+  leveragedSolAmount: number;
+  leveragedTokenYAmount: number;
 }
 
 // Constants for decimals
@@ -24,6 +26,19 @@ export function calculatePoolPrice(reserves: PoolReserves): number {
   const totalTokenY = (tokenYReserve + virtualTokenYReserve) / Math.pow(10, TOKEN_Y_DECIMALS);
   
   return totalSol / totalTokenY;
+}
+
+export function calculateRealReservesPrice(reserves: PoolReserves): number {
+  const { solReserve, tokenYReserve } = reserves;
+  
+  // Convert to human readable numbers
+  const realSol = solReserve / LAMPORTS_PER_SOL;
+  const realTokenY = tokenYReserve / Math.pow(10, TOKEN_Y_DECIMALS);
+  
+  // Avoid division by zero
+  if (realTokenY === 0) return 0;
+  
+  return realSol / realTokenY;
 }
 
 export function calculateRawMarketCap(reserves: PoolReserves, solPrice: number): number {
@@ -113,7 +128,9 @@ export async function getPoolReserves(
     solReserve: Number(poolAccount.lamports),
     virtualSolReserve: Number(poolAccount.virtualSolAmount),
     tokenYReserve: Number(poolAccount.tokenYAmount),
-    virtualTokenYReserve: Number(poolAccount.virtualTokenYAmount)
+    virtualTokenYReserve: Number(poolAccount.virtualTokenYAmount),
+    leveragedSolAmount: Number(poolAccount.leveragedSolAmount),
+    leveragedTokenYAmount: Number(poolAccount.leveragedTokenYAmount)
   };
 }
 

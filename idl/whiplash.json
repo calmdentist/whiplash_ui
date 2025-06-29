@@ -749,6 +749,11 @@
     },
     {
       "code": 6018,
+      "name": "DeltaKOverload",
+      "msg": "Delta K overload"
+    },
+    {
+      "code": 6019,
       "name": "PositionNotClosable",
       "msg": "Position cannot be closed (would require liquidation)"
     }
