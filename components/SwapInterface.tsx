@@ -489,15 +489,15 @@ export default function SwapInterface({ initialOutputToken }: SwapInterfaceProps
       {poolReserves && (
         <div className="text-xs font-mono text-[#b5b5b5] px-2 mt-4 space-y-1">
           <div className="flex justify-between items-center">
-            <span>SOL Reserves (real/leveraged):</span>
+            <span>SOL Reserves (real / virtual / debt):</span>
             <span className="text-white">
-              {formatTokenAmount(poolReserves.solReserve / LAMPORTS_PER_SOL)} / {formatTokenAmount(poolReserves.leveragedSolAmount / LAMPORTS_PER_SOL)}
+              {formatTokenAmount(poolReserves.solReserve / LAMPORTS_PER_SOL)} / {formatTokenAmount(poolReserves.virtualSolReserve / LAMPORTS_PER_SOL)} / {formatTokenAmount(poolReserves.leveragedSolAmount / LAMPORTS_PER_SOL)}
             </span>
           </div>
           <div className="flex justify-between items-center">
-            <span>{outputTokenSymbol} Reserves (real/leveraged):</span>
+            <span>{outputTokenSymbol} Reserves (real / virtual / debt):</span>
             <span className="text-white">
-              {formatTokenAmount(poolReserves.tokenYReserve / 1e6)} / {formatTokenAmount(poolReserves.leveragedTokenYAmount / 1e6)}
+              {formatTokenAmount(poolReserves.tokenYReserve / 1e6)} / {formatTokenAmount(poolReserves.virtualTokenYReserve / 1e6)} / {formatTokenAmount(poolReserves.leveragedTokenYAmount / 1e6)}
             </span>
           </div>
         </div>

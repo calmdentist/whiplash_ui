@@ -140,7 +140,9 @@ export default function TokensTable() {
       solReserve: Number(token.lamports),
       virtualSolReserve: Number(token.virtualSolAmount),
       tokenYReserve: Number(token.tokenYAmount),
-      virtualTokenYReserve: Number(token.virtualTokenYAmount)
+      virtualTokenYReserve: Number(token.virtualTokenYAmount),
+      leveragedSolAmount: 0,
+      leveragedTokenYAmount: 0
     };
     const marketCapStr = calculateTokenMarketCap(reserves, solPrice);
     // Parse the market cap string (remove $ and M/K suffixes)
