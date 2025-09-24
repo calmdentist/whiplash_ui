@@ -55,7 +55,7 @@ export async function createLaunchTokenTransaction({
   // Create pool PDA
   const [pool, poolBump] = PublicKey.findProgramAddressSync(
     [Buffer.from('pool'), mintKeypair.publicKey.toBuffer()],
-    new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ')
+    new PublicKey('DjSx4kWjgjUQ2QDjYcfJooCNhisSC2Rk3uzGkK9fJRbb')
   );
 
   console.log('Pool address:', pool.toBase58());
@@ -92,7 +92,7 @@ export async function createLaunchTokenTransaction({
   } as Wallet;
 
   const provider = new AnchorProvider(connection, anchorWallet, {});
-  const program = new Program(IDL as Idl, new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ'), provider);
+  const program = new Program(IDL as Idl, new PublicKey('DjSx4kWjgjUQ2QDjYcfJooCNhisSC2Rk3uzGkK9fJRbb'), provider);
 
   // Add launch instruction using Anchor
   const launchIx = await program.methods

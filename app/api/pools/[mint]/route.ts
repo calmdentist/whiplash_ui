@@ -4,7 +4,7 @@ import { RPC_URL } from "@/constants/constants";
 
 export const dynamic = "force-dynamic";
 
-const PROGRAM_ID = new PublicKey("GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ");
+const PROGRAM_ID = new PublicKey("DjSx4kWjgjUQ2QDjYcfJooCNhisSC2Rk3uzGkK9fJRbb");
 
 export async function GET(request: Request) {
   try {

@@ -116,7 +116,7 @@ export async function getPoolReserves(
   poolAddress: PublicKey
 ): Promise<PoolReserves> {
   // Create program instance
-  const program = new Program(IDL as Idl, new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ'), {
+  const program = new Program(IDL as Idl, new PublicKey('DjSx4kWjgjUQ2QDjYcfJooCNhisSC2Rk3uzGkK9fJRbb'), {
     connection,
     publicKey: PublicKey.default
   });

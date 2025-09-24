@@ -70,7 +70,7 @@ export async function createSwapTransaction({
   } as Wallet;
 
   const provider = new AnchorProvider(connection, anchorWallet, {});
-  const program = new Program(IDL as Idl, new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ'), provider);
+  const program = new Program(IDL as Idl, new PublicKey('DjSx4kWjgjUQ2QDjYcfJooCNhisSC2Rk3uzGkK9fJRbb'), provider);
 
   // Get pool data to determine token accounts
   const poolData = (await program.account.pool.fetch(pool)) as unknown as PoolAccount;
@@ -187,7 +187,7 @@ export async function createLeverageSwapTransaction({
   } as Wallet;
 
   const provider = new AnchorProvider(connection, anchorWallet, {});
-  const program = new Program(IDL as Idl, new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ'), provider);
+  const program = new Program(IDL as Idl, new PublicKey('DjSx4kWjgjUQ2QDjYcfJooCNhisSC2Rk3uzGkK9fJRbb'), provider);
 
   // Get pool data to determine token accounts
   const poolData = (await program.account.pool.fetch(pool)) as unknown as PoolAccount;
@@ -226,7 +226,7 @@ export async function createLeverageSwapTransaction({
       wallet.publicKey.toBuffer(),
       nonceBytes,
     ],
-    new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ')
+    new PublicKey('DjSx4kWjgjUQ2QDjYcfJooCNhisSC2Rk3uzGkK9fJRbb')
   );
 
   // Derive associated token account for the position PDA
@@ -329,7 +329,7 @@ export async function createClosePositionTransaction({
   } as Wallet;
 
   const provider = new AnchorProvider(connection, anchorWallet, {});
-  const program = new Program(IDL as Idl, new PublicKey('GHjAHPHGZocJKtxUhe3Eom5B73AF4XGXYukV4QMMDNhZ'), provider);
+  const program = new Program(IDL as Idl, new PublicKey('DjSx4kWjgjUQ2QDjYcfJooCNhisSC2Rk3uzGkK9fJRbb'), provider);
 
   // Fetch pool data directly using pool PDA provided
   const poolData = (await program.account.pool.fetch(pool)) as unknown as PoolAccount;
